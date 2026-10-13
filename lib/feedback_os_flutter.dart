@@ -14,6 +14,18 @@ export 'src/features/feedback/domain/entities/sdk_config_entity.dart'
 export 'src/features/feedback/domain/entities/sdk_ping_entity.dart'
     show SdkPingResult;
 
+// Feedback Submission & Item Entities
+export 'src/features/feedback/domain/entities/feedback_type.dart'
+    show FeedbackType;
+export 'src/features/feedback/domain/entities/feedback_device_info.dart'
+    show FeedbackDeviceInfo;
+export 'src/features/feedback/domain/entities/feedback_submission.dart'
+    show FeedbackSubmission;
+export 'src/features/feedback/domain/entities/feedback_item.dart'
+    show FeedbackItem;
+export 'src/features/feedback/domain/entities/feedback_submit_result.dart'
+    show FeedbackSubmitResult, FeedbackSubmitStatus;
+
 // Public Exceptions
 export 'src/core/errors/exceptions.dart'
     show
@@ -40,9 +52,11 @@ export 'src/core/errors/failures.dart'
         StorageFailure,
         ServerFailure;
 
-// Device ID store contract (for custom stores or test injection)
+// Device ID & Info provider contracts (for testing or custom providers)
 export 'src/identity/device_id_store.dart'
     show DeviceIdStore, InMemoryDeviceIdStore;
+export 'src/identity/device_info_provider.dart'
+    show DeviceInfoProvider, StaticDeviceInfoProvider;
 
 // Typography & Styles (per rule 16)
 export 'core/theme/styles.dart' show AppStyles;

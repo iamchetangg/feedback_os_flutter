@@ -2,10 +2,13 @@ import 'package:dio/dio.dart';
 import 'package:fpdart/fpdart.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/errors/failures.dart';
+import '../../domain/entities/feedback_item.dart';
+import '../../domain/entities/feedback_submission.dart';
 import '../../domain/entities/sdk_config_entity.dart';
 import '../../domain/entities/sdk_ping_entity.dart';
 import '../../domain/repositories/feedback_repository.dart';
 import '../datasources/feedback_remote_data_source.dart';
+import '../models/feedback_submission_model.dart';
 
 class FeedbackRepositoryImpl implements FeedbackRepository {
   final FeedbackRemoteDataSource _remoteDataSource;
@@ -96,6 +99,25 @@ class FeedbackRepositoryImpl implements FeedbackRepository {
         cancelToken: cancelToken,
       );
       return const Right(null);
+    } on FeedbackOsException catch (e) {
+      return Left(_mapExceptionToFailure(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, FeedbackItem>> submitFeedback(
+    FeedbackSubmission submission, {
+    CancelToken? cancelToken,
+  }) async {
+    try {
+      final model = FeedbackSubmissionModel.fromEntity(submission);
+      final item = await _remoteDataSource.submitFeedback(
+        model,
+        cancelToken: cancelToken,
+      );
+      return Right(item);
     } on FeedbackOsException catch (e) {
       return Left(_mapExceptionToFailure(e));
     } catch (e) {

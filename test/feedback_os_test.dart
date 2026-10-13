@@ -44,6 +44,7 @@ void main() {
         publishableKey: testKey,
         deviceIdStore: inMemoryStore,
         httpClient: mockHttpClient,
+        deviceInfoProvider: const StaticDeviceInfoProvider(),
       );
 
       expect(FeedbackOS.instance.isInitialized, isTrue);
@@ -57,6 +58,7 @@ void main() {
         publishableKey: testKey,
         deviceIdStore: inMemoryStore,
         httpClient: mockHttpClient,
+        deviceInfoProvider: const StaticDeviceInfoProvider(),
       );
 
       // Second call with same key should succeed without throwing
@@ -64,6 +66,7 @@ void main() {
         publishableKey: testKey,
         deviceIdStore: inMemoryStore,
         httpClient: mockHttpClient,
+        deviceInfoProvider: const StaticDeviceInfoProvider(),
       );
 
       expect(FeedbackOS.instance.isInitialized, isTrue);
@@ -75,6 +78,7 @@ void main() {
         publishableKey: testKey,
         deviceIdStore: inMemoryStore,
         httpClient: mockHttpClient,
+        deviceInfoProvider: const StaticDeviceInfoProvider(),
       );
 
       expect(
@@ -107,6 +111,7 @@ void main() {
         publishableKey: testKey,
         deviceIdStore: inMemoryStore,
         httpClient: mockHttpClient,
+        deviceInfoProvider: const StaticDeviceInfoProvider(),
       );
     });
 
@@ -190,6 +195,62 @@ void main() {
 
       await FeedbackOS.instance.clearIdentity();
       expect(FeedbackOS.instance.activeExternalUserId, isNull);
+    });
+
+    test(
+        'submitFeedback submits bug and returns FeedbackSubmitResult with sent status',
+        () async {
+      when(
+        () => mockHttpClient.post<Map<String, dynamic>>(
+          any(),
+          data: any(named: 'data'),
+          queryParameters: any(named: 'queryParameters'),
+          options: any(named: 'options'),
+          cancelToken: any(named: 'cancelToken'),
+          includeAuthHeaders: any(named: 'includeAuthHeaders'),
+        ),
+      ).thenAnswer(
+        (_) async => Response(
+          requestOptions: RequestOptions(path: '/v1/sdk/feedback'),
+          statusCode: 201,
+          data: {
+            'id': '99999999-8888-7777-6666-555555555555',
+            'type': 'bug',
+            'title': 'Payment failed',
+            'description': 'Crash on submit',
+            'category': 'Payments',
+            'status': 'open',
+            'is_public': false,
+            'created_at': '2026-10-13T12:00:00Z',
+          },
+        ),
+      );
+
+      final result = await FeedbackOS.instance.submitFeedback(
+        type: FeedbackType.bug,
+        title: 'Payment failed',
+        description: 'Crash on submit',
+        category: 'Payments',
+        clientSubmissionId: 'custom_sub_id_12345',
+      );
+
+      expect(result.status, equals(FeedbackSubmitStatus.sent));
+      expect(result.isSent, isTrue);
+      expect(result.itemId, equals('99999999-8888-7777-6666-555555555555'));
+      expect(result.clientSubmissionId, equals('custom_sub_id_12345'));
+      expect(result.item?.title, equals('Payment failed'));
+    });
+
+    test(
+        'submitFeedback validates empty title and throws FeedbackOsValidationException',
+        () async {
+      expect(
+        () => FeedbackOS.instance.submitFeedback(
+          type: FeedbackType.feature,
+          title: '   ',
+        ),
+        throwsA(isA<FeedbackOsValidationException>()),
+      );
     });
   });
 }

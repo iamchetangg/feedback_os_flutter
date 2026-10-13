@@ -1,17 +1,24 @@
 import 'package:dio/dio.dart';
+import 'package:uuid/uuid.dart';
 import 'config/feedback_os_options.dart';
 import 'core/errors/exceptions.dart';
 import 'core/errors/failures.dart';
 import 'core/network/feedback_os_dio_client.dart';
 import 'features/feedback/data/datasources/feedback_remote_data_source.dart';
 import 'features/feedback/data/repositories/feedback_repository_impl.dart';
+import 'features/feedback/domain/entities/feedback_device_info.dart';
+import 'features/feedback/domain/entities/feedback_submit_result.dart';
+import 'features/feedback/domain/entities/feedback_submission.dart';
+import 'features/feedback/domain/entities/feedback_type.dart';
 import 'features/feedback/domain/entities/sdk_config_entity.dart';
 import 'features/feedback/domain/entities/sdk_ping_entity.dart';
 import 'features/feedback/domain/repositories/feedback_repository.dart';
 import 'features/feedback/domain/usecases/get_sdk_config_usecase.dart';
 import 'features/feedback/domain/usecases/identify_user_usecase.dart';
 import 'features/feedback/domain/usecases/ping_sdk_usecase.dart';
+import 'features/feedback/domain/usecases/submit_feedback_usecase.dart';
 import 'identity/device_id_store.dart';
+import 'identity/device_info_provider.dart';
 
 /// The primary entrypoint and public facade for the FeedbackOS Flutter SDK.
 class FeedbackOS {
@@ -26,12 +33,14 @@ class FeedbackOS {
   String? _publishableKey;
   FeedbackOSOptions? _options;
   DeviceIdStore? _deviceIdStore;
+  DeviceInfoProvider? _deviceInfoProvider;
   FeedbackOsHttpClient? _httpClient;
   FeedbackRepository? _repository;
 
   GetSdkConfigUseCase? _getConfigUseCase;
   PingSdkUseCase? _pingUseCase;
   IdentifyUserUseCase? _identifyUseCase;
+  SubmitFeedbackUseCase? _submitFeedbackUseCase;
 
   String? _activeExternalUserId;
 
@@ -56,6 +65,12 @@ class FeedbackOS {
     return _deviceIdStore!;
   }
 
+  /// Internal access to device info provider.
+  DeviceInfoProvider get deviceInfoProvider {
+    _ensureInitialized();
+    return _deviceInfoProvider!;
+  }
+
   /// Initializes the FeedbackOS SDK.
   ///
   /// Safe to call repeatedly with the same [publishableKey].
@@ -64,6 +79,7 @@ class FeedbackOS {
     required String publishableKey,
     FeedbackOSOptions? options,
     DeviceIdStore? deviceIdStore,
+    DeviceInfoProvider? deviceInfoProvider,
     FeedbackOsHttpClient? httpClient,
   }) async {
     final sanitizedKey = publishableKey.trim();
@@ -95,6 +111,7 @@ class FeedbackOS {
     _publishableKey = sanitizedKey;
     _options = options ?? FeedbackOSOptions();
     _deviceIdStore = deviceIdStore ?? SecureDeviceIdStore();
+    _deviceInfoProvider = deviceInfoProvider ?? DefaultDeviceInfoProvider();
 
     _httpClient = httpClient ??
         FeedbackOsDioClient(
@@ -109,6 +126,7 @@ class FeedbackOS {
     _getConfigUseCase = GetSdkConfigUseCase(_repository!);
     _pingUseCase = PingSdkUseCase(_repository!);
     _identifyUseCase = IdentifyUserUseCase(_repository!);
+    _submitFeedbackUseCase = SubmitFeedbackUseCase(_repository!);
 
     _isInitialized = true;
   }
@@ -180,17 +198,68 @@ class FeedbackOS {
     await identify(externalUserId: null, cancelToken: cancelToken);
   }
 
+  /// Submits feedback (bug or feature request) to the FeedbackOS API.
+  Future<FeedbackSubmitResult> submitFeedback({
+    required FeedbackType type,
+    required String title,
+    String description = '',
+    String? category,
+    List<String> screenshotUploadIds = const [],
+    String? clientSubmissionId,
+    FeedbackDeviceInfo? customDeviceInfo,
+    CancelToken? cancelToken,
+  }) async {
+    _ensureInitialized();
+
+    final submissionId = clientSubmissionId ?? const Uuid().v4().toLowerCase();
+    final device =
+        customDeviceInfo ?? await _deviceInfoProvider!.getDeviceInfo();
+
+    final submission = FeedbackSubmission(
+      clientSubmissionId: submissionId,
+      type: type,
+      title: title,
+      description: description,
+      category: category,
+      device: device,
+      screenshotUploadIds: screenshotUploadIds,
+    );
+
+    try {
+      submission.validate();
+    } on ArgumentError catch (e) {
+      throw FeedbackOsValidationException(e.message.toString());
+    }
+
+    final result = await _submitFeedbackUseCase!.call(
+      submission,
+      cancelToken: cancelToken,
+    );
+
+    return result.fold(
+      (failure) => throw _mapFailureToException(failure),
+      (item) => FeedbackSubmitResult(
+        status: FeedbackSubmitStatus.sent,
+        itemId: item.id,
+        clientSubmissionId: submissionId,
+        item: item,
+      ),
+    );
+  }
+
   /// Resets the SDK state. Mainly used in unit and integration testing.
   Future<void> reset() async {
     _isInitialized = false;
     _publishableKey = null;
     _options = null;
     _deviceIdStore = null;
+    _deviceInfoProvider = null;
     _httpClient = null;
     _repository = null;
     _getConfigUseCase = null;
     _pingUseCase = null;
     _identifyUseCase = null;
+    _submitFeedbackUseCase = null;
     _activeExternalUserId = null;
   }
 

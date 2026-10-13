@@ -2,6 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:feedback_os_flutter/feedback_os_flutter.dart';
 import 'package:feedback_os_flutter/src/features/feedback/data/datasources/feedback_remote_data_source.dart';
+import 'package:feedback_os_flutter/src/features/feedback/data/models/feedback_item_model.dart';
+import 'package:feedback_os_flutter/src/features/feedback/data/models/feedback_submission_model.dart';
 import 'package:feedback_os_flutter/src/features/feedback/data/models/sdk_config_model.dart';
 import 'package:feedback_os_flutter/src/features/feedback/data/models/sdk_ping_model.dart';
 import 'package:feedback_os_flutter/src/features/feedback/data/repositories/feedback_repository_impl.dart';
@@ -12,6 +14,21 @@ class MockFeedbackRemoteDataSource extends Mock
 void main() {
   late MockFeedbackRemoteDataSource mockDataSource;
   late FeedbackRepositoryImpl repository;
+
+  setUpAll(() {
+    registerFallbackValue(
+      const FeedbackSubmissionModel(
+        clientSubmissionId: 'fallback_id_1234',
+        type: FeedbackType.bug,
+        title: 'Title',
+        device: FeedbackDeviceInfo(
+          osVersion: 'os',
+          appVersion: 'app',
+          deviceModel: 'model',
+        ),
+      ),
+    );
+  });
 
   setUp(() {
     mockDataSource = MockFeedbackRemoteDataSource();
@@ -121,6 +138,70 @@ void main() {
       expect(result.isLeft(), isTrue);
       result.match(
         (failure) => expect(failure, isA<ValidationFailure>()),
+        (_) => fail('Expected Left'),
+      );
+    });
+  });
+
+  group('FeedbackRepository.submitFeedback', () {
+    const testSubmission = FeedbackSubmission(
+      clientSubmissionId: 'sub_test_12345678',
+      type: FeedbackType.bug,
+      title: 'Crash on tap',
+      device: FeedbackDeviceInfo(
+        osVersion: 'Android 14',
+        appVersion: '1.0.0',
+        deviceModel: 'Pixel 8',
+      ),
+    );
+
+    final expectedItem = FeedbackItemModel(
+      id: '1c0e8260-63ee-4213-a70d-f06f88da777c',
+      type: FeedbackType.bug,
+      title: 'Crash on tap',
+      description: '',
+      category: null,
+      status: 'open',
+      isPublic: false,
+      createdAt: DateTime.utc(2026, 10, 13, 12),
+    );
+
+    test('returns Right(FeedbackItem) on successful submission', () async {
+      when(
+        () => mockDataSource.submitFeedback(
+          any(),
+          cancelToken: any(named: 'cancelToken'),
+        ),
+      ).thenAnswer((_) async => expectedItem);
+
+      final result = await repository.submitFeedback(testSubmission);
+
+      expect(result.isRight(), isTrue);
+      result.match(
+        (failure) => fail('Expected Right'),
+        (item) {
+          expect(item.id, equals('1c0e8260-63ee-4213-a70d-f06f88da777c'));
+          expect(item.type, equals(FeedbackType.bug));
+          expect(item.title, equals('Crash on tap'));
+        },
+      );
+    });
+
+    test('returns Left(AuthenticationFailure) on 401', () async {
+      when(
+        () => mockDataSource.submitFeedback(
+          any(),
+          cancelToken: any(named: 'cancelToken'),
+        ),
+      ).thenThrow(
+        const FeedbackOsAuthenticationException('Invalid key', statusCode: 401),
+      );
+
+      final result = await repository.submitFeedback(testSubmission);
+
+      expect(result.isLeft(), isTrue);
+      result.match(
+        (failure) => expect(failure, isA<AuthenticationFailure>()),
         (_) => fail('Expected Left'),
       );
     });

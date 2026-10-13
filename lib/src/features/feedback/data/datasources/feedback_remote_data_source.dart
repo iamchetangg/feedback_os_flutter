@@ -1,16 +1,26 @@
 import 'package:dio/dio.dart';
 import '../../../../core/network/api_endpoints.dart';
 import '../../../../core/network/feedback_os_dio_client.dart';
+import '../models/feedback_item_model.dart';
+import '../models/feedback_submission_model.dart';
 import '../models/sdk_config_model.dart';
 import '../models/sdk_ping_model.dart';
 
 abstract interface class FeedbackRemoteDataSource {
-  Future<SdkConfigModel> getConfig(String publishableKey,
-      {CancelToken? cancelToken});
+  Future<SdkConfigModel> getConfig(
+    String publishableKey, {
+    CancelToken? cancelToken,
+  });
+
   Future<SdkPingModel> ping({CancelToken? cancelToken});
-  Future<void> identify(String? externalUserId, {CancelToken? cancelToken});
-  Future<Map<String, dynamic>> submitFeedback(
-    Map<String, dynamic> payload, {
+
+  Future<void> identify(
+    String? externalUserId, {
+    CancelToken? cancelToken,
+  });
+
+  Future<FeedbackItemModel> submitFeedback(
+    FeedbackSubmissionModel submission, {
     CancelToken? cancelToken,
   });
 }
@@ -61,17 +71,17 @@ class FeedbackRemoteDataSourceImpl implements FeedbackRemoteDataSource {
   }
 
   @override
-  Future<Map<String, dynamic>> submitFeedback(
-    Map<String, dynamic> payload, {
+  Future<FeedbackItemModel> submitFeedback(
+    FeedbackSubmissionModel submission, {
     CancelToken? cancelToken,
   }) async {
     final response = await _client.post<Map<String, dynamic>>(
       ApiEndpoints.feedback,
-      data: payload,
+      data: submission.toJson(),
       cancelToken: cancelToken,
       includeAuthHeaders: true,
     );
 
-    return response.data ?? {};
+    return FeedbackItemModel.fromJson(response.data ?? {});
   }
 }
