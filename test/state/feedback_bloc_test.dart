@@ -4,9 +4,6 @@ import 'package:mocktail/mocktail.dart';
 import 'package:feedback_os_flutter/feedback_os_flutter.dart';
 import 'package:feedback_os_flutter/src/features/feedback/domain/repositories/feedback_repository.dart';
 import 'package:feedback_os_flutter/src/features/feedback/domain/usecases/get_sdk_config_usecase.dart';
-import 'package:feedback_os_flutter/src/features/feedback/state/feedback_bloc.dart';
-import 'package:feedback_os_flutter/src/features/feedback/state/feedback_event.dart';
-import 'package:feedback_os_flutter/src/features/feedback/state/feedback_state.dart';
 
 class MockFeedbackRepository extends Mock implements FeedbackRepository {}
 

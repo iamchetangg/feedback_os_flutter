@@ -26,6 +26,24 @@ export 'src/features/feedback/domain/entities/feedback_item.dart'
 export 'src/features/feedback/domain/entities/feedback_submit_result.dart'
     show FeedbackSubmitResult, FeedbackSubmitStatus;
 
+// Presentation & State (BLoC)
+export 'src/features/feedback/presentation/feedback_form.dart'
+    show FeedbackFormDialog;
+export 'src/features/feedback/state/feedback_bloc.dart'
+    show FeedbackBloc, FeedbackSubmitHandler;
+export 'src/features/feedback/state/feedback_event.dart'
+    show
+        FeedbackEvent,
+        FeedbackFormStarted,
+        FeedbackTypeChanged,
+        FeedbackTitleChanged,
+        FeedbackDescriptionChanged,
+        FeedbackCategoryChanged,
+        FeedbackSubmitted,
+        FeedbackReset;
+export 'src/features/feedback/state/feedback_state.dart'
+    show FeedbackState, FeedbackFormStatus;
+
 // Offline Queue Entities & Contracts
 export 'src/features/feedback/domain/entities/queued_feedback.dart'
     show QueuedFeedback, QueueStatus;

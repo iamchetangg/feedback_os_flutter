@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
 import 'config/feedback_os_options.dart';
 import 'core/errors/exceptions.dart';
@@ -24,6 +26,9 @@ import 'features/feedback/domain/usecases/get_sdk_config_usecase.dart';
 import 'features/feedback/domain/usecases/identify_user_usecase.dart';
 import 'features/feedback/domain/usecases/ping_sdk_usecase.dart';
 import 'features/feedback/domain/usecases/submit_feedback_usecase.dart';
+import 'features/feedback/presentation/feedback_form.dart';
+import 'features/feedback/state/feedback_bloc.dart';
+import 'features/feedback/state/feedback_event.dart';
 import 'identity/device_id_store.dart';
 import 'identity/device_info_provider.dart';
 
@@ -399,6 +404,50 @@ class FeedbackOS {
   Future<void> clearFailedSubmissions() async {
     _ensureInitialized();
     await _submissionStore!.clearPermanentlyFailed(appScope: _publishableKey!);
+  }
+
+  /// Displays the interactive FeedbackOS submission dialog.
+  ///
+  /// Safe to call from any valid [BuildContext].
+  /// Adheres to project Golden Rule 6: Bloc is instantiated outside the UI tree
+  /// and injected cleanly via BlocProvider.
+  Future<FeedbackSubmitResult?> showFeedback({
+    required BuildContext context,
+    FeedbackType initialType = FeedbackType.bug,
+    FeedbackBloc? customBloc,
+  }) async {
+    _ensureInitialized();
+
+    final bloc = customBloc ??
+        FeedbackBloc(
+          submitHandler: ({
+            required type,
+            required title,
+            required description,
+            category,
+          }) =>
+              submitFeedback(
+            type: type,
+            title: title,
+            description: description,
+            category: category,
+          ),
+          getConfigUseCase: _getConfigUseCase,
+          publishableKey: _publishableKey,
+        );
+
+    bloc.add(FeedbackFormStarted(initialType: initialType));
+
+    return showDialog<FeedbackSubmitResult>(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) {
+        return BlocProvider<FeedbackBloc>.value(
+          value: bloc,
+          child: const FeedbackFormDialog(),
+        );
+      },
+    );
   }
 
   /// Resets the SDK state and closes storage connections.
