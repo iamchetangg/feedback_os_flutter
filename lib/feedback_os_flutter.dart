@@ -26,6 +26,16 @@ export 'src/features/feedback/domain/entities/feedback_item.dart'
 export 'src/features/feedback/domain/entities/feedback_submit_result.dart'
     show FeedbackSubmitResult, FeedbackSubmitStatus;
 
+// Offline Queue Entities & Contracts
+export 'src/features/feedback/domain/entities/queued_feedback.dart'
+    show QueuedFeedback, QueueStatus;
+export 'src/features/feedback/data/datasources/submission_store.dart'
+    show SubmissionStore;
+export 'src/features/feedback/data/datasources/in_memory_submission_store.dart'
+    show InMemorySubmissionStore;
+export 'src/features/feedback/data/datasources/sqlite_submission_store.dart'
+    show SqliteSubmissionStore;
+
 // Public Exceptions
 export 'src/core/errors/exceptions.dart'
     show

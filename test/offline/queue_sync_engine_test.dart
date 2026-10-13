@@ -3,11 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:feedback_os_flutter/feedback_os_flutter.dart';
 import 'package:feedback_os_flutter/src/features/feedback/data/datasources/feedback_remote_data_source.dart';
-import 'package:feedback_os_flutter/src/features/feedback/data/datasources/in_memory_submission_store.dart';
 import 'package:feedback_os_flutter/src/features/feedback/data/datasources/queue_sync_engine.dart';
 import 'package:feedback_os_flutter/src/features/feedback/data/models/feedback_item_model.dart';
 import 'package:feedback_os_flutter/src/features/feedback/data/models/feedback_submission_model.dart';
-import 'package:feedback_os_flutter/src/features/feedback/domain/entities/queued_feedback.dart';
 
 class MockFeedbackRemoteDataSource extends Mock
     implements FeedbackRemoteDataSource {}

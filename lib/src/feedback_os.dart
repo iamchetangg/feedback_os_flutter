@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:uuid/uuid.dart';
 import 'config/feedback_os_options.dart';
@@ -5,11 +7,16 @@ import 'core/errors/exceptions.dart';
 import 'core/errors/failures.dart';
 import 'core/network/feedback_os_dio_client.dart';
 import 'features/feedback/data/datasources/feedback_remote_data_source.dart';
+import 'features/feedback/data/datasources/queue_sync_engine.dart';
+import 'features/feedback/data/datasources/sqlite_submission_store.dart';
+import 'features/feedback/data/datasources/submission_store.dart';
+import 'features/feedback/data/models/feedback_submission_model.dart';
 import 'features/feedback/data/repositories/feedback_repository_impl.dart';
 import 'features/feedback/domain/entities/feedback_device_info.dart';
 import 'features/feedback/domain/entities/feedback_submit_result.dart';
 import 'features/feedback/domain/entities/feedback_submission.dart';
 import 'features/feedback/domain/entities/feedback_type.dart';
+import 'features/feedback/domain/entities/queued_feedback.dart';
 import 'features/feedback/domain/entities/sdk_config_entity.dart';
 import 'features/feedback/domain/entities/sdk_ping_entity.dart';
 import 'features/feedback/domain/repositories/feedback_repository.dart';
@@ -34,6 +41,8 @@ class FeedbackOS {
   FeedbackOSOptions? _options;
   DeviceIdStore? _deviceIdStore;
   DeviceInfoProvider? _deviceInfoProvider;
+  SubmissionStore? _submissionStore;
+  QueueSyncEngine? _queueSyncEngine;
   FeedbackOsHttpClient? _httpClient;
   FeedbackRepository? _repository;
 
@@ -71,15 +80,22 @@ class FeedbackOS {
     return _deviceInfoProvider!;
   }
 
+  /// Internal access to offline submission store.
+  SubmissionStore get submissionStore {
+    _ensureInitialized();
+    return _submissionStore!;
+  }
+
   /// Initializes the FeedbackOS SDK.
   ///
   /// Safe to call repeatedly with the same [publishableKey].
-  /// Does not require immediate network connectivity to initialize.
+  /// Opens durable local storage without requiring network access.
   Future<void> initialize({
     required String publishableKey,
     FeedbackOSOptions? options,
     DeviceIdStore? deviceIdStore,
     DeviceInfoProvider? deviceInfoProvider,
+    SubmissionStore? submissionStore,
     FeedbackOsHttpClient? httpClient,
   }) async {
     final sanitizedKey = publishableKey.trim();
@@ -112,6 +128,10 @@ class FeedbackOS {
     _options = options ?? FeedbackOSOptions();
     _deviceIdStore = deviceIdStore ?? SecureDeviceIdStore();
     _deviceInfoProvider = deviceInfoProvider ?? DefaultDeviceInfoProvider();
+    _submissionStore = submissionStore ?? SqliteSubmissionStore();
+
+    // Open persistent offline storage
+    await _submissionStore!.open();
 
     _httpClient = httpClient ??
         FeedbackOsDioClient(
@@ -128,7 +148,19 @@ class FeedbackOS {
     _identifyUseCase = IdentifyUserUseCase(_repository!);
     _submitFeedbackUseCase = SubmitFeedbackUseCase(_repository!);
 
+    _queueSyncEngine = QueueSyncEngine(
+      store: _submissionStore!,
+      remoteDataSource: remoteDataSource,
+      options: _options!,
+      appScope: sanitizedKey,
+      getActiveUserId: () async => _activeExternalUserId,
+      setActiveUserId: (id) async => _activeExternalUserId = id,
+    );
+
     _isInitialized = true;
+
+    // Trigger non-blocking sync of pending submissions
+    unawaited(_queueSyncEngine!.flushQueue());
   }
 
   void _ensureInitialized() {
@@ -198,7 +230,13 @@ class FeedbackOS {
     await identify(externalUserId: null, cancelToken: cancelToken);
   }
 
-  /// Submits feedback (bug or feature request) to the FeedbackOS API.
+  /// Submits feedback (bug or feature request) following persist-before-send delivery.
+  ///
+  /// 1. Validates local payload bounds.
+  /// 2. Commits submission to durable offline queue.
+  /// 3. Attempts immediate transmission.
+  /// 4. If delivered (HTTP 201/200), removes from queue and returns status `sent`.
+  /// 5. If network fails, leaves in queue with scheduled retry and returns status `queued`.
   Future<FeedbackSubmitResult> submitFeedback({
     required FeedbackType type,
     required String title,
@@ -231,29 +269,153 @@ class FeedbackOS {
       throw FeedbackOsValidationException(e.message.toString());
     }
 
-    final result = await _submitFeedbackUseCase!.call(
-      submission,
-      cancelToken: cancelToken,
+    // Check queue bounds
+    final totalCount =
+        await _submissionStore!.getTotalCount(appScope: _publishableKey!);
+    if (totalCount >= _options!.maxOfflineQueueSize) {
+      throw FeedbackOsStorageException(
+        'Offline queue capacity reached (${_options!.maxOfflineQueueSize} items). '
+        'Cannot accept new feedback submissions until space is freed.',
+      );
+    }
+
+    // 1. Persist before send
+    final submissionModel = FeedbackSubmissionModel.fromEntity(submission);
+    final now = DateTime.now().toUtc();
+    final queuedItem = QueuedFeedback(
+      clientSubmissionId: submissionId,
+      payloadJson: jsonEncode(submissionModel.toJson()),
+      appScope: _publishableKey!,
+      externalUserId: _activeExternalUserId,
+      createdAt: now,
+      nextAttemptAt: now,
+      status: QueueStatus.pending,
     );
 
-    return result.fold(
-      (failure) => throw _mapFailureToException(failure),
-      (item) => FeedbackSubmitResult(
-        status: FeedbackSubmitStatus.sent,
-        itemId: item.id,
+    try {
+      await _submissionStore!.insert(queuedItem);
+    } catch (e) {
+      throw FeedbackOsStorageException(
+        'Failed to persist feedback submission to offline storage: $e',
+      );
+    }
+
+    // 2. Attempt immediate delivery
+    try {
+      final result = await _submitFeedbackUseCase!.call(
+        submission,
+        cancelToken: cancelToken,
+      );
+
+      return await result.fold(
+        (failure) async {
+          final exception = _mapFailureToException(failure);
+
+          if (exception is FeedbackOsValidationException ||
+              exception is FeedbackOsPayloadTooLargeException) {
+            // Permanent rejection -> mark failed and throw
+            await _submissionStore!.markPermanentlyFailed(
+              submissionId,
+              errorCode: exception.code ?? 'invalid_request',
+              errorMessage: exception.message,
+            );
+            throw exception;
+          } else if (exception is FeedbackOsAuthenticationException ||
+              exception is FeedbackOsSubscriptionException) {
+            // Auth / billing issue -> keep in queue, throw exception
+            await _submissionStore!.scheduleRetry(
+              submissionId,
+              nextAttemptAt: now.add(const Duration(minutes: 5)),
+              attemptCount: 1,
+              errorCode: exception.code ?? 'auth_error',
+              errorMessage: exception.message,
+            );
+            throw exception;
+          } else {
+            // Network or transient 5xx -> scheduled in queue, return queued status
+            await _submissionStore!.scheduleRetry(
+              submissionId,
+              nextAttemptAt: now.add(const Duration(seconds: 10)),
+              attemptCount: 1,
+              errorCode: exception.code ?? 'network_error',
+              errorMessage: exception.message,
+            );
+            return FeedbackSubmitResult(
+              status: FeedbackSubmitStatus.queued,
+              clientSubmissionId: submissionId,
+            );
+          }
+        },
+        (item) async {
+          // Delivered successfully! Remove from queue and return sent result
+          await _submissionStore!.remove(submissionId);
+          return FeedbackSubmitResult(
+            status: FeedbackSubmitStatus.sent,
+            itemId: item.id,
+            clientSubmissionId: submissionId,
+            item: item,
+          );
+        },
+      );
+    } catch (e) {
+      if (e is FeedbackOsException) rethrow;
+
+      // Other unexpected exceptions treat as queued
+      await _submissionStore!.scheduleRetry(
+        submissionId,
+        nextAttemptAt: now.add(const Duration(seconds: 10)),
+        attemptCount: 1,
+        errorCode: 'network_error',
+        errorMessage: e.toString(),
+      );
+      return FeedbackSubmitResult(
+        status: FeedbackSubmitStatus.queued,
         clientSubmissionId: submissionId,
-        item: item,
-      ),
-    );
+      );
+    }
   }
 
-  /// Resets the SDK state. Mainly used in unit and integration testing.
+  /// Triggers an immediate transmission attempt for all due queued feedback items.
+  ///
+  /// Returns the number of feedback items successfully delivered.
+  Future<int> flushQueue() async {
+    _ensureInitialized();
+    return _queueSyncEngine!.flushQueue();
+  }
+
+  /// Returns the number of items currently pending or awaiting retry in the queue.
+  Future<int> getQueuedCount() async {
+    _ensureInitialized();
+    return _submissionStore!.getPendingCount(appScope: _publishableKey!);
+  }
+
+  /// Returns the number of permanently failed items in the queue.
+  Future<int> getFailedCount() async {
+    _ensureInitialized();
+    return _submissionStore!.getFailedCount(appScope: _publishableKey!);
+  }
+
+  /// Discards all permanently failed feedback items from the queue.
+  Future<void> clearFailedSubmissions() async {
+    _ensureInitialized();
+    await _submissionStore!.clearPermanentlyFailed(appScope: _publishableKey!);
+  }
+
+  /// Resets the SDK state and closes storage connections.
   Future<void> reset() async {
+    if (_submissionStore != null) {
+      try {
+        await _submissionStore!.close();
+      } catch (_) {}
+    }
+
     _isInitialized = false;
     _publishableKey = null;
     _options = null;
     _deviceIdStore = null;
     _deviceInfoProvider = null;
+    _submissionStore = null;
+    _queueSyncEngine = null;
     _httpClient = null;
     _repository = null;
     _getConfigUseCase = null;
