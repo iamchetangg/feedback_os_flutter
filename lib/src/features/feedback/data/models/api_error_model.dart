@@ -67,6 +67,16 @@ class ApiErrorModel extends Equatable {
           details: details,
           retryAfter: retryAfter,
         ),
+      'upload_not_found' => FeedbackOsUploadNotFoundException(
+          message,
+          statusCode: statusCode ?? 404,
+          details: details,
+        ),
+      'upload_invalid' => FeedbackOsUploadInvalidException(
+          message,
+          statusCode: statusCode ?? 422,
+          details: details,
+        ),
       _ => FeedbackOsServerException(
           message,
           code: code,
@@ -102,6 +112,14 @@ class ApiErrorModel extends Equatable {
           message,
           statusCode: statusCode ?? 429,
           retryAfter: retryAfter,
+        ),
+      'upload_not_found' => UploadNotFoundFailure(
+          message,
+          statusCode: statusCode ?? 404,
+        ),
+      'upload_invalid' => UploadInvalidFailure(
+          message,
+          statusCode: statusCode ?? 422,
         ),
       _ => ServerFailure(
           message,

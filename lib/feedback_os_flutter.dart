@@ -54,6 +54,12 @@ export 'src/features/feedback/data/datasources/in_memory_submission_store.dart'
 export 'src/features/feedback/data/datasources/sqlite_submission_store.dart'
     show SqliteSubmissionStore;
 
+// Upload & Attachment Entities
+export 'src/features/uploads/domain/entities/upload_reservation.dart'
+    show UploadReservation;
+export 'src/features/uploads/domain/entities/screenshot_attachment.dart'
+    show ScreenshotAttachment;
+
 // Public Exceptions
 export 'src/core/errors/exceptions.dart'
     show
@@ -64,6 +70,8 @@ export 'src/core/errors/exceptions.dart'
         FeedbackOsValidationException,
         FeedbackOsRateLimitException,
         FeedbackOsPayloadTooLargeException,
+        FeedbackOsUploadNotFoundException,
+        FeedbackOsUploadInvalidException,
         FeedbackOsStorageException,
         FeedbackOsServerException;
 
@@ -77,6 +85,8 @@ export 'src/core/errors/failures.dart'
         ValidationFailure,
         RateLimitFailure,
         PayloadTooLargeFailure,
+        UploadNotFoundFailure,
+        UploadInvalidFailure,
         StorageFailure,
         ServerFailure;
 

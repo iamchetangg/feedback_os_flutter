@@ -48,6 +48,14 @@ class FeedbackRepositoryImpl implements FeedbackRepository {
           statusCode: e.statusCode,
         ),
       FeedbackOsStorageException() => StorageFailure(e.message),
+      FeedbackOsUploadNotFoundException() => UploadNotFoundFailure(
+          e.message,
+          statusCode: e.statusCode,
+        ),
+      FeedbackOsUploadInvalidException() => UploadInvalidFailure(
+          e.message,
+          statusCode: e.statusCode,
+        ),
       FeedbackOsServerException() => ServerFailure(
           e.message,
           code: e.code,

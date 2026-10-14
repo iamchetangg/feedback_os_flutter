@@ -61,6 +61,20 @@ final class PayloadTooLargeFailure extends Failure {
   }) : super(code: 'payload_too_large');
 }
 
+final class UploadNotFoundFailure extends Failure {
+  const UploadNotFoundFailure(
+    super.message, {
+    super.statusCode = 404,
+  }) : super(code: 'upload_not_found');
+}
+
+final class UploadInvalidFailure extends Failure {
+  const UploadInvalidFailure(
+    super.message, {
+    super.statusCode = 422,
+  }) : super(code: 'upload_invalid');
+}
+
 final class StorageFailure extends Failure {
   const StorageFailure(super.message) : super(code: 'storage_error');
 }
@@ -72,3 +86,4 @@ final class ServerFailure extends Failure {
     super.statusCode = 500,
   });
 }
+

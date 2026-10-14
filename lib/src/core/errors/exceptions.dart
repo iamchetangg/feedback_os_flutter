@@ -85,6 +85,26 @@ final class FeedbackOsStorageException extends FeedbackOsException {
   }) : super(code: 'storage_error');
 }
 
+/// Thrown when an upload reservation is not found (HTTP 404).
+final class FeedbackOsUploadNotFoundException extends FeedbackOsException {
+  const FeedbackOsUploadNotFoundException(
+    super.message, {
+    super.code = 'upload_not_found',
+    super.statusCode = 404,
+    super.details,
+  });
+}
+
+/// Thrown when an uploaded file is invalid or corrupt (HTTP 422).
+final class FeedbackOsUploadInvalidException extends FeedbackOsException {
+  const FeedbackOsUploadInvalidException(
+    super.message, {
+    super.code = 'upload_invalid',
+    super.statusCode = 422,
+    super.details,
+  });
+}
+
 /// Thrown when server responds with 5xx or unhandled status codes.
 final class FeedbackOsServerException extends FeedbackOsException {
   const FeedbackOsServerException(
@@ -94,3 +114,4 @@ final class FeedbackOsServerException extends FeedbackOsException {
     super.details,
   });
 }
+
