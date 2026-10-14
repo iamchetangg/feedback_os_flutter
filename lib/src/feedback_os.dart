@@ -35,6 +35,27 @@ import 'features/uploads/data/repositories/upload_repository_impl.dart';
 import 'features/uploads/domain/entities/screenshot_attachment.dart';
 import 'features/uploads/domain/repositories/upload_repository.dart';
 import 'features/uploads/domain/usecases/upload_screenshot_use_case.dart';
+import 'features/board/data/datasources/board_remote_data_source.dart';
+import 'features/board/data/repositories/board_repository_impl.dart';
+import 'features/board/domain/entities/board_page.dart';
+import 'features/board/domain/entities/roadmap.dart';
+import 'features/board/domain/entities/vote_result.dart';
+import 'features/board/domain/repositories/board_repository.dart';
+import 'features/board/domain/usecases/get_board_use_case.dart';
+import 'features/board/domain/usecases/get_roadmap_use_case.dart';
+import 'features/board/domain/usecases/unvote_item_use_case.dart';
+import 'features/board/domain/usecases/vote_item_use_case.dart';
+import 'features/threads/data/datasources/threads_remote_data_source.dart';
+import 'features/threads/data/repositories/threads_repository_impl.dart';
+import 'features/threads/domain/entities/my_feedback_item.dart';
+import 'features/threads/domain/entities/thread_detail.dart';
+import 'features/threads/domain/entities/thread_reply.dart';
+import 'features/threads/domain/repositories/threads_repository.dart';
+import 'features/threads/domain/usecases/get_my_items_use_case.dart';
+import 'features/threads/domain/usecases/get_thread_detail_use_case.dart';
+import 'features/threads/domain/usecases/get_unread_count_use_case.dart';
+import 'features/threads/domain/usecases/mark_thread_read_use_case.dart';
+import 'features/threads/domain/usecases/send_reply_use_case.dart';
 import 'identity/device_id_store.dart';
 import 'identity/device_info_provider.dart';
 
@@ -57,13 +78,25 @@ class FeedbackOS {
   FeedbackOsHttpClient? _httpClient;
   FeedbackRepository? _repository;
   UploadRepository? _uploadRepository;
+  BoardRepository? _boardRepository;
+  ThreadsRepository? _threadsRepository;
 
   GetSdkConfigUseCase? _getConfigUseCase;
   PingSdkUseCase? _pingUseCase;
   IdentifyUserUseCase? _identifyUseCase;
   SubmitFeedbackUseCase? _submitFeedbackUseCase;
   UploadScreenshotUseCase? _uploadScreenshotUseCase;
+  GetBoardUseCase? _getBoardUseCase;
+  GetRoadmapUseCase? _getRoadmapUseCase;
+  VoteItemUseCase? _voteItemUseCase;
+  UnvoteItemUseCase? _unvoteItemUseCase;
+  GetUnreadCountUseCase? _getUnreadCountUseCase;
+  GetMyItemsUseCase? _getMyItemsUseCase;
+  GetThreadDetailUseCase? _getThreadDetailUseCase;
+  SendReplyUseCase? _sendReplyUseCase;
+  MarkThreadReadUseCase? _markThreadReadUseCase;
 
+  SdkConfig? _cachedConfig;
   String? _activeExternalUserId;
 
   /// Whether the SDK has been initialized.
@@ -111,6 +144,18 @@ class FeedbackOS {
     return _uploadScreenshotUseCase!;
   }
 
+  /// Internal access to board repository.
+  BoardRepository get boardRepository {
+    _ensureInitialized();
+    return _boardRepository!;
+  }
+
+  /// Internal access to threads repository.
+  ThreadsRepository get threadsRepository {
+    _ensureInitialized();
+    return _threadsRepository!;
+  }
+
   /// Initializes the FeedbackOS SDK.
   ///
   /// Safe to call repeatedly with the same [publishableKey].
@@ -124,6 +169,8 @@ class FeedbackOS {
     FeedbackOsHttpClient? httpClient,
     UploadRepository? uploadRepository,
     BinaryUploader? binaryUploader,
+    BoardRepository? boardRepository,
+    ThreadsRepository? threadsRepository,
   }) async {
     final sanitizedKey = publishableKey.trim();
 
@@ -178,11 +225,30 @@ class FeedbackOS {
           binaryUploader: binaryUploader ?? DioBinaryUploader(),
         );
 
+    final boardRemoteDataSource =
+        BoardRemoteDataSourceImpl(client: _httpClient!);
+    _boardRepository = boardRepository ??
+        BoardRepositoryImpl(remoteDataSource: boardRemoteDataSource);
+
+    final threadsRemoteDataSource =
+        ThreadsRemoteDataSourceImpl(client: _httpClient!);
+    _threadsRepository = threadsRepository ??
+        ThreadsRepositoryImpl(remoteDataSource: threadsRemoteDataSource);
+
     _getConfigUseCase = GetSdkConfigUseCase(_repository!);
     _pingUseCase = PingSdkUseCase(_repository!);
     _identifyUseCase = IdentifyUserUseCase(_repository!);
     _submitFeedbackUseCase = SubmitFeedbackUseCase(_repository!);
     _uploadScreenshotUseCase = UploadScreenshotUseCase(_uploadRepository!);
+    _getBoardUseCase = GetBoardUseCase(_boardRepository!);
+    _getRoadmapUseCase = GetRoadmapUseCase(_boardRepository!);
+    _voteItemUseCase = VoteItemUseCase(_boardRepository!);
+    _unvoteItemUseCase = UnvoteItemUseCase(_boardRepository!);
+    _getUnreadCountUseCase = GetUnreadCountUseCase(_threadsRepository!);
+    _getMyItemsUseCase = GetMyItemsUseCase(_threadsRepository!);
+    _getThreadDetailUseCase = GetThreadDetailUseCase(_threadsRepository!);
+    _sendReplyUseCase = SendReplyUseCase(_threadsRepository!);
+    _markThreadReadUseCase = MarkThreadReadUseCase(_threadsRepository!);
 
     _queueSyncEngine = QueueSyncEngine(
       store: _submissionStore!,
@@ -225,15 +291,24 @@ class FeedbackOS {
   }
 
   /// Fetches the project SDK configuration from the server.
-  Future<SdkConfig> getConfig({CancelToken? cancelToken}) async {
+  Future<SdkConfig> getConfig({
+    bool forceRefresh = false,
+    CancelToken? cancelToken,
+  }) async {
     _ensureInitialized();
+    if (_cachedConfig != null && !forceRefresh) {
+      return _cachedConfig!;
+    }
     final result = await _getConfigUseCase!.call(
       _publishableKey!,
       cancelToken: cancelToken,
     );
     return result.fold(
       (failure) => throw _mapFailureToException(failure),
-      (data) => data,
+      (data) {
+        _cachedConfig = data;
+        return data;
+      },
     );
   }
 
@@ -283,7 +358,170 @@ class FeedbackOS {
     );
   }
 
+  /// Fetches paginated public board items.
+  ///
+  /// When [checkConfig] is true (default), verifies against SDK configuration
+  /// that the community board feature is enabled for this project.
+  Future<BoardPage> getBoard({
+    String sort = 'top',
+    String? cursor,
+    int limit = 25,
+    bool checkConfig = true,
+    CancelToken? cancelToken,
+  }) async {
+    _ensureInitialized();
+    if (checkConfig) {
+      final config = await getConfig(cancelToken: cancelToken);
+      if (!config.board.enabled) {
+        throw const FeedbackOsValidationException(
+          'Board feature is disabled for this project in SDK configuration.',
+          code: 'feature_disabled',
+          statusCode: 403,
+        );
+      }
+    }
+    final result = await _getBoardUseCase!.call(
+      sort: sort,
+      cursor: cursor,
+      limit: limit,
+      cancelToken: cancelToken,
+    );
+    return result.fold(
+      (failure) => throw _mapFailureToException(failure),
+      (page) => page,
+    );
+  }
+
+  /// Fetches roadmap items grouped by status (planned, in_progress, shipped).
+  ///
+  /// When [checkConfig] is true (default), verifies against SDK configuration
+  /// that the roadmap feature is enabled for this project.
+  Future<Roadmap> getRoadmap({
+    bool checkConfig = true,
+    CancelToken? cancelToken,
+  }) async {
+    _ensureInitialized();
+    if (checkConfig) {
+      final config = await getConfig(cancelToken: cancelToken);
+      if (!config.roadmap.enabled) {
+        throw const FeedbackOsValidationException(
+          'Roadmap feature is disabled for this project in SDK configuration.',
+          code: 'feature_disabled',
+          statusCode: 403,
+        );
+      }
+    }
+    final result = await _getRoadmapUseCase!.call(cancelToken: cancelToken);
+    return result.fold(
+      (failure) => throw _mapFailureToException(failure),
+      (roadmap) => roadmap,
+    );
+  }
+
+  /// Upvotes a feedback item for this device.
+  Future<VoteResult> voteItem({
+    required String itemId,
+    CancelToken? cancelToken,
+  }) async {
+    _ensureInitialized();
+    final result = await _voteItemUseCase!.call(
+      itemId: itemId,
+      cancelToken: cancelToken,
+    );
+    return result.fold(
+      (failure) => throw _mapFailureToException(failure),
+      (vote) => vote,
+    );
+  }
+
+  /// Removes an upvote from a feedback item for this device.
+  Future<VoteResult> unvoteItem({
+    required String itemId,
+    CancelToken? cancelToken,
+  }) async {
+    _ensureInitialized();
+    final result = await _unvoteItemUseCase!.call(
+      itemId: itemId,
+      cancelToken: cancelToken,
+    );
+    return result.fold(
+      (failure) => throw _mapFailureToException(failure),
+      (vote) => vote,
+    );
+  }
+
+  /// Returns unread replies/updates count for the current user/device.
+  Future<int> getUnreadCount({CancelToken? cancelToken}) async {
+    _ensureInitialized();
+    final result = await _getUnreadCountUseCase!.call(cancelToken: cancelToken);
+    return result.fold(
+      (failure) => throw _mapFailureToException(failure),
+      (unread) => unread.count,
+    );
+  }
+
+  /// Returns the list of feedback submitted by the current user/device.
+  Future<List<MyFeedbackItem>> getMyItems({CancelToken? cancelToken}) async {
+    _ensureInitialized();
+    final result = await _getMyItemsUseCase!.call(cancelToken: cancelToken);
+    return result.fold(
+      (failure) => throw _mapFailureToException(failure),
+      (items) => items,
+    );
+  }
+
+  /// Returns full thread details with replies and event timeline for [itemId].
+  Future<ThreadDetail> getThreadDetail({
+    required String itemId,
+    CancelToken? cancelToken,
+  }) async {
+    _ensureInitialized();
+    final result = await _getThreadDetailUseCase!.call(
+      itemId: itemId,
+      cancelToken: cancelToken,
+    );
+    return result.fold(
+      (failure) => throw _mapFailureToException(failure),
+      (detail) => detail,
+    );
+  }
+
+  /// Posts a reply message to a feedback thread.
+  Future<ThreadReply> sendReply({
+    required String itemId,
+    required String message,
+    CancelToken? cancelToken,
+  }) async {
+    _ensureInitialized();
+    final result = await _sendReplyUseCase!.call(
+      itemId: itemId,
+      message: message,
+      cancelToken: cancelToken,
+    );
+    return result.fold(
+      (failure) => throw _mapFailureToException(failure),
+      (reply) => reply,
+    );
+  }
+
+  /// Marks unread notifications/replies on a thread as read.
+  Future<void> markThreadRead({
+    required String itemId,
+    CancelToken? cancelToken,
+  }) async {
+    _ensureInitialized();
+    final result = await _markThreadReadUseCase!.call(
+      itemId: itemId,
+      cancelToken: cancelToken,
+    );
+    result.fold(
+      (failure) => throw _mapFailureToException(failure),
+      (_) => null,
+    );
+  }
+
   /// Submits feedback (bug or feature request) following persist-before-send delivery.
+
   ///
   /// 1. Validates local payload bounds.
   /// 2. Commits submission to durable offline queue.
@@ -561,6 +799,16 @@ class FeedbackOS {
     _identifyUseCase = null;
     _submitFeedbackUseCase = null;
     _uploadScreenshotUseCase = null;
+    _getBoardUseCase = null;
+    _getRoadmapUseCase = null;
+    _voteItemUseCase = null;
+    _unvoteItemUseCase = null;
+    _getUnreadCountUseCase = null;
+    _getMyItemsUseCase = null;
+    _getThreadDetailUseCase = null;
+    _sendReplyUseCase = null;
+    _markThreadReadUseCase = null;
+    _cachedConfig = null;
     _activeExternalUserId = null;
   }
 
@@ -580,6 +828,11 @@ class FeedbackOS {
           failure.message,
           code: failure.code ?? 'invalid_request',
           statusCode: failure.statusCode ?? 400,
+        ),
+      FeatureDisabledFailure() => FeedbackOsValidationException(
+          failure.message,
+          code: failure.code ?? 'feature_disabled',
+          statusCode: failure.statusCode ?? 403,
         ),
       PayloadTooLargeFailure() => FeedbackOsPayloadTooLargeException(
           failure.message,

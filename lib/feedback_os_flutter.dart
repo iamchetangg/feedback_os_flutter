@@ -62,6 +62,28 @@ export 'src/features/uploads/domain/entities/upload_reservation.dart'
 export 'src/features/uploads/domain/entities/screenshot_attachment.dart'
     show ScreenshotAttachment;
 
+// Community Board & Roadmap Entities
+export 'src/features/board/domain/entities/board_item.dart' show BoardItem;
+export 'src/features/board/domain/entities/board_page.dart' show BoardPage;
+export 'src/features/board/domain/entities/roadmap.dart' show Roadmap;
+export 'src/features/board/domain/entities/vote_result.dart' show VoteResult;
+export 'src/features/board/domain/repositories/board_repository.dart'
+    show BoardRepository;
+
+// User Threads & My Items Entities
+export 'src/features/threads/domain/entities/unread_count.dart'
+    show UnreadCount;
+export 'src/features/threads/domain/entities/my_feedback_item.dart'
+    show MyFeedbackItem;
+export 'src/features/threads/domain/entities/thread_detail.dart'
+    show ThreadDetail;
+export 'src/features/threads/domain/entities/thread_reply.dart'
+    show ThreadReply;
+export 'src/features/threads/domain/entities/thread_event.dart'
+    show ThreadEvent;
+export 'src/features/threads/domain/repositories/threads_repository.dart'
+    show ThreadsRepository;
+
 // Public Exceptions
 export 'src/core/errors/exceptions.dart'
     show
@@ -85,6 +107,7 @@ export 'src/core/errors/failures.dart'
         AuthenticationFailure,
         SubscriptionFailure,
         ValidationFailure,
+        FeatureDisabledFailure,
         RateLimitFailure,
         PayloadTooLargeFailure,
         UploadNotFoundFailure,

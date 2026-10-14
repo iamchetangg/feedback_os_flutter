@@ -455,6 +455,346 @@ void main() {
           equals(Uint8List.fromList([10, 20, 30])));
     });
   });
+
+  group('FeedbackOS Board & Roadmap Facade Operations', () {
+    setUp(() async {
+      when(
+        () => mockHttpClient.get<Map<String, dynamic>>(
+          ApiEndpoints.config(testKey),
+          cancelToken: any(named: 'cancelToken'),
+          includeAuthHeaders: any(named: 'includeAuthHeaders'),
+        ),
+      ).thenAnswer(
+        (_) async => Response(
+          requestOptions: RequestOptions(path: ApiEndpoints.config(testKey)),
+          statusCode: 200,
+          data: {
+            'app_id': 'app_123',
+            'config_version': 1,
+            'enabled': true,
+            'board': {'enabled': true},
+            'roadmap': {'enabled': true},
+            'categories': ['UI', 'General'],
+            'statuses': ['open', 'in_progress', 'planned', 'shipped'],
+            'limits': {
+              'max_screenshots': 3,
+              'max_screenshot_bytes': 5242880,
+              'screenshot_types': ['image/jpeg', 'image/png'],
+            },
+          },
+        ),
+      );
+
+      await FeedbackOS.instance.initialize(
+        publishableKey: testKey,
+        deviceIdStore: inMemoryDeviceStore,
+        submissionStore: inMemorySubmissionStore,
+        httpClient: mockHttpClient,
+        deviceInfoProvider: const StaticDeviceInfoProvider(),
+      );
+    });
+
+    test('getBoard returns BoardPage when board is enabled', () async {
+      when(
+        () => mockHttpClient.get<Map<String, dynamic>>(
+          ApiEndpoints.board,
+          queryParameters: any(named: 'queryParameters'),
+          cancelToken: any(named: 'cancelToken'),
+        ),
+      ).thenAnswer(
+        (_) async => Response(
+          requestOptions: RequestOptions(path: ApiEndpoints.board),
+          statusCode: 200,
+          data: {
+            'data': [
+              {
+                'id': 'b_1',
+                'title': 'Feature Idea',
+                'status': 'open',
+                'vote_count': 10,
+                'has_voted': false,
+                'is_mine': false,
+              }
+            ],
+            'next_cursor': 'cursor_999',
+          },
+        ),
+      );
+
+      final page = await FeedbackOS.instance.getBoard();
+
+      expect(page.items.length, 1);
+      expect(page.items.first.title, 'Feature Idea');
+      expect(page.nextCursor, 'cursor_999');
+    });
+
+    test(
+        'getBoard throws validation exception when board is disabled in config',
+        () async {
+      await FeedbackOS.instance.reset();
+      when(
+        () => mockHttpClient.get<Map<String, dynamic>>(
+          ApiEndpoints.config(testKey),
+          cancelToken: any(named: 'cancelToken'),
+          includeAuthHeaders: any(named: 'includeAuthHeaders'),
+        ),
+      ).thenAnswer(
+        (_) async => Response(
+          requestOptions: RequestOptions(path: ApiEndpoints.config(testKey)),
+          statusCode: 200,
+          data: {
+            'app_id': 'app_123',
+            'config_version': 1,
+            'enabled': true,
+            'board': {'enabled': false},
+            'roadmap': {'enabled': true},
+            'categories': [],
+            'statuses': [],
+            'limits': {
+              'max_screenshots': 3,
+              'max_screenshot_bytes': 5242880,
+              'screenshot_types': ['image/jpeg'],
+            },
+          },
+        ),
+      );
+
+      await FeedbackOS.instance.initialize(
+        publishableKey: testKey,
+        deviceIdStore: inMemoryDeviceStore,
+        submissionStore: inMemorySubmissionStore,
+        httpClient: mockHttpClient,
+        deviceInfoProvider: const StaticDeviceInfoProvider(),
+      );
+
+      expect(
+        () => FeedbackOS.instance.getBoard(),
+        throwsA(isA<FeedbackOsValidationException>().having(
+          (e) => e.code,
+          'code',
+          'feature_disabled',
+        )),
+      );
+    });
+
+    test('getRoadmap returns Roadmap when enabled', () async {
+      when(
+        () => mockHttpClient.get<Map<String, dynamic>>(
+          ApiEndpoints.roadmap,
+          cancelToken: any(named: 'cancelToken'),
+        ),
+      ).thenAnswer(
+        (_) async => Response(
+          requestOptions: RequestOptions(path: ApiEndpoints.roadmap),
+          statusCode: 200,
+          data: {
+            'planned': [
+              {
+                'id': 'r_1',
+                'title': 'Roadmap Item',
+                'status': 'planned',
+                'vote_count': 5,
+                'has_voted': true,
+                'is_mine': true,
+              }
+            ],
+            'in_progress': [],
+            'shipped': [],
+          },
+        ),
+      );
+
+      final roadmap = await FeedbackOS.instance.getRoadmap();
+
+      expect(roadmap.planned.length, 1);
+      expect(roadmap.planned.first.id, 'r_1');
+    });
+
+    test('voteItem and unvoteItem return updated VoteResult', () async {
+      when(
+        () => mockHttpClient.post<Map<String, dynamic>>(
+          ApiEndpoints.itemVote('item_1'),
+          cancelToken: any(named: 'cancelToken'),
+        ),
+      ).thenAnswer(
+        (_) async => Response(
+          requestOptions: RequestOptions(path: ApiEndpoints.itemVote('item_1')),
+          statusCode: 200,
+          data: {'vote_count': 11, 'has_voted': true},
+        ),
+      );
+
+      final vote = await FeedbackOS.instance.voteItem(itemId: 'item_1');
+      expect(vote.voteCount, 11);
+      expect(vote.hasVoted, isTrue);
+
+      when(
+        () => mockHttpClient.delete<Map<String, dynamic>>(
+          ApiEndpoints.itemVote('item_1'),
+          cancelToken: any(named: 'cancelToken'),
+        ),
+      ).thenAnswer(
+        (_) async => Response(
+          requestOptions: RequestOptions(path: ApiEndpoints.itemVote('item_1')),
+          statusCode: 200,
+          data: {'vote_count': 10, 'has_voted': false},
+        ),
+      );
+
+      final unvote = await FeedbackOS.instance.unvoteItem(itemId: 'item_1');
+      expect(unvote.voteCount, 10);
+      expect(unvote.hasVoted, isFalse);
+    });
+  });
+
+  group('FeedbackOS Threads Facade Operations', () {
+    setUp(() async {
+      await FeedbackOS.instance.initialize(
+        publishableKey: testKey,
+        deviceIdStore: inMemoryDeviceStore,
+        submissionStore: inMemorySubmissionStore,
+        httpClient: mockHttpClient,
+        deviceInfoProvider: const StaticDeviceInfoProvider(),
+      );
+    });
+
+    test('getUnreadCount returns integer count', () async {
+      when(
+        () => mockHttpClient.get<Map<String, dynamic>>(
+          ApiEndpoints.meUnread,
+          cancelToken: any(named: 'cancelToken'),
+        ),
+      ).thenAnswer(
+        (_) async => Response(
+          requestOptions: RequestOptions(path: ApiEndpoints.meUnread),
+          statusCode: 200,
+          data: {'count': 7},
+        ),
+      );
+
+      final count = await FeedbackOS.instance.getUnreadCount();
+      expect(count, 7);
+    });
+
+    test('getMyItems returns list of user items', () async {
+      when(
+        () => mockHttpClient.get<Map<String, dynamic>>(
+          ApiEndpoints.meItems,
+          cancelToken: any(named: 'cancelToken'),
+        ),
+      ).thenAnswer(
+        (_) async => Response(
+          requestOptions: RequestOptions(path: ApiEndpoints.meItems),
+          statusCode: 200,
+          data: {
+            'data': [
+              {
+                'id': 'my_1',
+                'title': 'My Report',
+                'type': 'bug',
+                'status': 'open',
+                'has_unread': true,
+              }
+            ]
+          },
+        ),
+      );
+
+      final items = await FeedbackOS.instance.getMyItems();
+      expect(items.length, 1);
+      expect(items.first.title, 'My Report');
+      expect(items.first.hasUnread, isTrue);
+    });
+
+    test('getThreadDetail returns detail with replies and events', () async {
+      when(
+        () => mockHttpClient.get<Map<String, dynamic>>(
+          ApiEndpoints.meItemDetail('item_123'),
+          cancelToken: any(named: 'cancelToken'),
+        ),
+      ).thenAnswer(
+        (_) async => Response(
+          requestOptions:
+              RequestOptions(path: ApiEndpoints.meItemDetail('item_123')),
+          statusCode: 200,
+          data: {
+            'id': 'item_123',
+            'title': 'My Thread',
+            'description': 'Details',
+            'type': 'feature',
+            'status': 'planned',
+            'replies': [
+              {
+                'id': 'rep_1',
+                'body': 'Great suggestion!',
+                'author_type': 'admin',
+              }
+            ],
+            'events': [],
+          },
+        ),
+      );
+
+      final detail =
+          await FeedbackOS.instance.getThreadDetail(itemId: 'item_123');
+      expect(detail.id, 'item_123');
+      expect(detail.replies.length, 1);
+      expect(detail.replies.first.isAdmin, isTrue);
+    });
+
+    test('sendReply posts message and returns ThreadReply', () async {
+      when(
+        () => mockHttpClient.post<Map<String, dynamic>>(
+          ApiEndpoints.meItemReplies('item_123'),
+          data: {'body': 'Thanks!'},
+          cancelToken: any(named: 'cancelToken'),
+        ),
+      ).thenAnswer(
+        (_) async => Response(
+          requestOptions:
+              RequestOptions(path: ApiEndpoints.meItemReplies('item_123')),
+          statusCode: 201,
+          data: {
+            'id': 'rep_2',
+            'body': 'Thanks!',
+            'author_type': 'user',
+          },
+        ),
+      );
+
+      final reply = await FeedbackOS.instance.sendReply(
+        itemId: 'item_123',
+        message: 'Thanks!',
+      );
+
+      expect(reply.id, 'rep_2');
+      expect(reply.body, 'Thanks!');
+      expect(reply.isUser, isTrue);
+    });
+
+    test('markThreadRead calls mark read endpoint without error', () async {
+      when(
+        () => mockHttpClient.post<dynamic>(
+          ApiEndpoints.meItemRead('item_123'),
+          cancelToken: any(named: 'cancelToken'),
+        ),
+      ).thenAnswer(
+        (_) async => Response(
+          requestOptions:
+              RequestOptions(path: ApiEndpoints.meItemRead('item_123')),
+          statusCode: 204,
+        ),
+      );
+
+      await FeedbackOS.instance.markThreadRead(itemId: 'item_123');
+      verify(
+        () => mockHttpClient.post<dynamic>(
+          ApiEndpoints.meItemRead('item_123'),
+          cancelToken: null,
+        ),
+      ).called(1);
+    });
+  });
 }
 
 class _FakeBinaryUploader implements BinaryUploader {
