@@ -86,4 +86,3 @@ final class ServerFailure extends Failure {
     super.statusCode = 500,
   });
 }
-

@@ -119,19 +119,27 @@ class _HomeScreenState extends State<HomeScreen> {
             Card(
               elevation: 0,
               color: const Color(0xFFF3F4F6),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Active Identity: ${activeUser ?? "Anonymous"}',
-                        style: const TextStyle(fontWeight: FontWeight.w600)),
+                    Text(
+                      'Active Identity: ${activeUser ?? "Anonymous"}',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
                     const SizedBox(height: 4),
-                    Text('Pending in Offline Queue: $_queuedCount',
-                        style: const TextStyle(color: Color(0xFF4B5563))),
-                    Text('Permanently Failed: $_failedCount',
-                        style: const TextStyle(color: Color(0xFF4B5563))),
+                    Text(
+                      'Pending in Offline Queue: $_queuedCount',
+                      style: const TextStyle(color: Color(0xFF4B5563)),
+                    ),
+                    Text(
+                      'Permanently Failed: $_failedCount',
+                      style: const TextStyle(color: Color(0xFF4B5563)),
+                    ),
                     if (_statusMessage != null) ...[
                       const SizedBox(height: 8),
                       Container(
@@ -192,9 +200,11 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 12),
             OutlinedButton.icon(
               icon: Icon(activeUser == null ? Icons.login : Icons.logout),
-              label: Text(activeUser == null
-                  ? 'Identify as customer_demo_42'
-                  : 'Clear Identity (Logout)'),
+              label: Text(
+                activeUser == null
+                    ? 'Identify as customer_demo_42'
+                    : 'Clear Identity (Logout)',
+              ),
               onPressed: _toggleIdentity,
             ),
             const SizedBox(height: 8),

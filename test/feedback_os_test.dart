@@ -451,7 +451,8 @@ void main() {
       );
 
       expect(uploadId, equals('upload-uuid-456'));
-      expect(dummyUploader.uploadedBytes, equals(Uint8List.fromList([10, 20, 30])));
+      expect(dummyUploader.uploadedBytes,
+          equals(Uint8List.fromList([10, 20, 30])));
     });
   });
 }

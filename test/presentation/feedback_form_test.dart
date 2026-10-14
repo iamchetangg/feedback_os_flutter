@@ -5,7 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:feedback_os_flutter/feedback_os_flutter.dart';
 
 void main() {
-  Widget buildTestableWidget(FeedbackBloc bloc, {Future<ScreenshotAttachment?> Function()? onPick}) {
+  Widget buildTestableWidget(FeedbackBloc bloc,
+      {Future<ScreenshotAttachment?> Function()? onPick}) {
     return MaterialApp(
       home: Scaffold(
         body: BlocProvider<FeedbackBloc>.value(

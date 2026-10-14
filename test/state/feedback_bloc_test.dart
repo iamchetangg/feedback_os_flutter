@@ -208,9 +208,8 @@ void main() {
 
       await expectLater(
         bloc.stream,
-        emitsThrough(isA<FeedbackState>()
-            .having((s) => s.errorMessage, 'errorMessage',
-                contains('Cannot attach more than 3 screenshots'))),
+        emitsThrough(isA<FeedbackState>().having((s) => s.errorMessage,
+            'errorMessage', contains('Cannot attach more than 3 screenshots'))),
       );
       expect(bloc.state.attachments.length, 3);
     });

@@ -4,7 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('Upload Models Test', () {
-    test('CreateUploadRequestModel serializes to JSON matching OpenAPI spec', () {
+    test('CreateUploadRequestModel serializes to JSON matching OpenAPI spec',
+        () {
       const model = CreateUploadRequestModel(
         contentType: 'image/png',
         byteSize: 10240,

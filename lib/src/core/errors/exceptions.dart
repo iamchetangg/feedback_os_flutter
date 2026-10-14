@@ -114,4 +114,3 @@ final class FeedbackOsServerException extends FeedbackOsException {
     super.details,
   });
 }
-

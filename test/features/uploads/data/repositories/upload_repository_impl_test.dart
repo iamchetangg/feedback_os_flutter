@@ -28,7 +28,8 @@ void main() {
       );
     });
 
-    test('reserveUpload returns Right(UploadReservation) on remote success', () async {
+    test('reserveUpload returns Right(UploadReservation) on remote success',
+        () async {
       final reservationModel = UploadReservationModel(
         uploadId: 'upload-id-999',
         method: 'PUT',
@@ -51,10 +52,13 @@ void main() {
       );
 
       expect(result.isRight(), isTrue);
-      expect(result.getOrElse((_) => throw Exception()), equals(reservationModel));
+      expect(
+          result.getOrElse((_) => throw Exception()), equals(reservationModel));
     });
 
-    test('reserveUpload maps FeedbackOsAuthenticationException to AuthenticationFailure', () async {
+    test(
+        'reserveUpload maps FeedbackOsAuthenticationException to AuthenticationFailure',
+        () async {
       when(
         () => mockRemote.reserveUpload(
           contentType: 'image/png',
@@ -104,7 +108,9 @@ void main() {
       expect(result.getOrElse((_) => throw Exception()), equals(unit));
     });
 
-    test('uploadBinary maps FeedbackOsUploadNotFoundException to UploadNotFoundFailure', () async {
+    test(
+        'uploadBinary maps FeedbackOsUploadNotFoundException to UploadNotFoundFailure',
+        () async {
       final bytes = Uint8List.fromList([1, 2, 3]);
       final reservation = UploadReservation(
         uploadId: 'upload-123',
@@ -121,7 +127,8 @@ void main() {
           cancelToken: any(named: 'cancelToken'),
         ),
       ).thenThrow(
-        const FeedbackOsUploadNotFoundException('Upload expired', statusCode: 404),
+        const FeedbackOsUploadNotFoundException('Upload expired',
+            statusCode: 404),
       );
 
       final result = await repository.uploadBinary(

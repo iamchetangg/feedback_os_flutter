@@ -206,7 +206,8 @@ void main() {
       expect(await store.getById('old_item'), isNull);
     });
 
-    test('re-reserves and uploads pending attachments during flushQueue', () async {
+    test('re-reserves and uploads pending attachments during flushQueue',
+        () async {
       final fakeUploadRepo = _FakeUploadRepository();
       final engineWithUploads = QueueSyncEngine(
         store: store,
@@ -248,8 +249,10 @@ void main() {
       await store.insert(queued);
 
       FeedbackSubmissionModel? capturedSubmission;
-      when(() => mockRemote.submitFeedback(any())).thenAnswer((invocation) async {
-        capturedSubmission = invocation.positionalArguments.first as FeedbackSubmissionModel;
+      when(() => mockRemote.submitFeedback(any()))
+          .thenAnswer((invocation) async {
+        capturedSubmission =
+            invocation.positionalArguments.first as FeedbackSubmissionModel;
         return FeedbackItemModel(
           id: 'server_item_999',
           type: FeedbackType.bug,
@@ -266,7 +269,8 @@ void main() {
       expect(sentCount, equals(1));
       expect(fakeUploadRepo.reservedContentType, equals('image/png'));
       expect(fakeUploadRepo.reservedByteSize, equals(4));
-      expect(capturedSubmission?.screenshotUploadIds, equals(['fresh-upload-id-999']));
+      expect(capturedSubmission?.screenshotUploadIds,
+          equals(['fresh-upload-id-999']));
       expect(await store.getById('sub_offline_att_123'), isNull);
     });
   });

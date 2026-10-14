@@ -420,10 +420,8 @@ class _ScreenshotAttachmentsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final attachments =
-        context.select((FeedbackBloc b) => b.state.attachments);
-    final canAdd =
-        context.select((FeedbackBloc b) => b.state.canAddAttachment);
+    final attachments = context.select((FeedbackBloc b) => b.state.attachments);
+    final canAdd = context.select((FeedbackBloc b) => b.state.canAddAttachment);
 
     if (attachments.isEmpty && onPickAttachment == null) {
       return const SizedBox.shrink();
@@ -576,4 +574,3 @@ class _AddAttachmentButton extends StatelessWidget {
     );
   }
 }
-

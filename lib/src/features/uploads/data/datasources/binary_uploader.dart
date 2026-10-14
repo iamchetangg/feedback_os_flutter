@@ -37,8 +37,7 @@ class DioBinaryUploader implements BinaryUploader {
       // Build clean headers containing ONLY the reservation headers and content length.
       // Explicitly DO NOT include X-FeedbackOS-Key or X-FeedbackOS-Device.
       final cleanHeaders = <String, dynamic>{
-        for (final entry in reservation.headers.entries)
-          entry.key: entry.value,
+        for (final entry in reservation.headers.entries) entry.key: entry.value,
         'content-length': bytes.lengthInBytes.toString(),
       };
 
@@ -48,7 +47,8 @@ class DioBinaryUploader implements BinaryUploader {
         options: Options(
           headers: cleanHeaders,
           responseType: ResponseType.plain,
-          validateStatus: (status) => status != null && status >= 200 && status < 300,
+          validateStatus: (status) =>
+              status != null && status >= 200 && status < 300,
         ),
         cancelToken: cancelToken,
       );

@@ -17,7 +17,9 @@ void main() {
       dataSource = UploadRemoteDataSourceImpl(client: mockClient);
     });
 
-    test('successfully requests upload reservation with correct path, headers, and body', () async {
+    test(
+        'successfully requests upload reservation with correct path, headers, and body',
+        () async {
       final responsePayload = {
         'upload_id': '45f3c099-231a-4713-94c0-fdb2422ca2ff',
         'method': 'PUT',
@@ -51,7 +53,8 @@ void main() {
 
       expect(result.uploadId, '45f3c099-231a-4713-94c0-fdb2422ca2ff');
       expect(result.method, 'PUT');
-      expect(result.url, Uri.parse('https://r2.feedbackos.dev/bucket/photo.jpg'));
+      expect(
+          result.url, Uri.parse('https://r2.feedbackos.dev/bucket/photo.jpg'));
       expect(result.headers['content-type'], 'image/jpeg');
 
       verify(

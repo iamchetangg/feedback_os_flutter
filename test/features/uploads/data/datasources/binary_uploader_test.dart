@@ -87,7 +87,9 @@ void main() {
       expect(capturedHeaders['x-feedbackos-device'], isNull);
     });
 
-    test('throws FeedbackOsUploadNotFoundException if reservation is already expired', () async {
+    test(
+        'throws FeedbackOsUploadNotFoundException if reservation is already expired',
+        () async {
       final bytes = Uint8List.fromList([1, 2, 3]);
       final reservation = UploadReservation(
         uploadId: 'expired-upload-id',
@@ -113,7 +115,9 @@ void main() {
       expect(capturedUri, isNull); // Network call was never made
     });
 
-    test('throws FeedbackOsUploadNotFoundException on HTTP 404 from storage URL', () async {
+    test(
+        'throws FeedbackOsUploadNotFoundException on HTTP 404 from storage URL',
+        () async {
       mockStatusCode = 404;
       final reservation = UploadReservation(
         uploadId: 'test-upload-id',
@@ -132,7 +136,8 @@ void main() {
       );
     });
 
-    test('throws FeedbackOsAuthenticationException on HTTP 403 forbidden', () async {
+    test('throws FeedbackOsAuthenticationException on HTTP 403 forbidden',
+        () async {
       mockStatusCode = 403;
       final reservation = UploadReservation(
         uploadId: 'test-upload-id',
