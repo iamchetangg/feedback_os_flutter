@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:mocktail/mocktail.dart';
@@ -39,6 +40,7 @@ void main() {
           required title,
           required description,
           category,
+          attachments = const [],
         }) async =>
             const FeedbackSubmitResult(
           status: FeedbackSubmitStatus.sent,
@@ -49,7 +51,9 @@ void main() {
       expect(bloc.state.status, equals(FeedbackFormStatus.initial));
       expect(bloc.state.type, equals(FeedbackType.bug));
       expect(bloc.state.title, isEmpty);
+      expect(bloc.state.attachments, isEmpty);
       expect(bloc.state.canSubmit, isFalse);
+      expect(bloc.state.canAddAttachment, isTrue);
     });
 
     test('FeedbackFormStarted loads categories from config', () async {
@@ -62,6 +66,7 @@ void main() {
           required title,
           required description,
           category,
+          attachments = const [],
         }) async =>
             const FeedbackSubmitResult(
           status: FeedbackSubmitStatus.sent,
@@ -95,6 +100,7 @@ void main() {
           required title,
           required description,
           category,
+          attachments = const [],
         }) async =>
             const FeedbackSubmitResult(
           status: FeedbackSubmitStatus.sent,
@@ -122,6 +128,93 @@ void main() {
       );
     });
 
+    test('FeedbackAttachmentAdded and FeedbackAttachmentRemoved update state',
+        () async {
+      final bloc = FeedbackBloc(
+        submitHandler: ({
+          required type,
+          required title,
+          required description,
+          category,
+          attachments = const [],
+        }) async =>
+            const FeedbackSubmitResult(
+          status: FeedbackSubmitStatus.sent,
+          clientSubmissionId: 'sub_1',
+        ),
+      );
+
+      final attachment = ScreenshotAttachment(
+        fileName: 'screen.png',
+        contentType: 'image/png',
+        bytes: Uint8List.fromList([1, 2, 3]),
+      );
+
+      bloc.add(FeedbackAttachmentAdded(attachment));
+      await expectLater(
+        bloc.stream,
+        emits(isA<FeedbackState>()
+            .having((s) => s.attachments.length, 'attachments length', 1)),
+      );
+
+      bloc.add(const FeedbackAttachmentRemoved(0));
+      await expectLater(
+        bloc.stream,
+        emits(isA<FeedbackState>()
+            .having((s) => s.attachments.length, 'attachments length', 0)),
+      );
+    });
+
+    test('cannot add more than 3 attachments', () async {
+      final bloc = FeedbackBloc(
+        submitHandler: ({
+          required type,
+          required title,
+          required description,
+          category,
+          attachments = const [],
+        }) async =>
+            const FeedbackSubmitResult(
+          status: FeedbackSubmitStatus.sent,
+          clientSubmissionId: 'sub_1',
+        ),
+      );
+
+      final a1 = ScreenshotAttachment(
+        fileName: '1.png',
+        contentType: 'image/png',
+        bytes: Uint8List.fromList([1]),
+      );
+      final a2 = ScreenshotAttachment(
+        fileName: '2.png',
+        contentType: 'image/png',
+        bytes: Uint8List.fromList([2]),
+      );
+      final a3 = ScreenshotAttachment(
+        fileName: '3.png',
+        contentType: 'image/png',
+        bytes: Uint8List.fromList([3]),
+      );
+      final a4 = ScreenshotAttachment(
+        fileName: '4.png',
+        contentType: 'image/png',
+        bytes: Uint8List.fromList([4]),
+      );
+
+      bloc.add(FeedbackAttachmentAdded(a1));
+      bloc.add(FeedbackAttachmentAdded(a2));
+      bloc.add(FeedbackAttachmentAdded(a3));
+      bloc.add(FeedbackAttachmentAdded(a4));
+
+      await expectLater(
+        bloc.stream,
+        emitsThrough(isA<FeedbackState>()
+            .having((s) => s.errorMessage, 'errorMessage',
+                contains('Cannot attach more than 3 screenshots'))),
+      );
+      expect(bloc.state.attachments.length, 3);
+    });
+
     test(
         'FeedbackSubmitted emits submitting then success on successful delivery',
         () async {
@@ -131,6 +224,7 @@ void main() {
           required title,
           required description,
           category,
+          attachments = const [],
         }) async =>
             const FeedbackSubmitResult(
           status: FeedbackSubmitStatus.sent,
@@ -162,6 +256,7 @@ void main() {
           required title,
           required description,
           category,
+          attachments = const [],
         }) async =>
             throw const FeedbackOsValidationException('Invalid request'),
       );

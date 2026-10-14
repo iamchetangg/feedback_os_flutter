@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../../uploads/domain/entities/screenshot_attachment.dart';
 import '../domain/entities/feedback_submit_result.dart';
 import '../domain/entities/feedback_type.dart';
 
@@ -18,6 +19,7 @@ class FeedbackState extends Equatable {
   final String description;
   final String? category;
   final List<String> availableCategories;
+  final List<ScreenshotAttachment> attachments;
   final FeedbackSubmitResult? submissionResult;
   final String? errorMessage;
 
@@ -28,6 +30,7 @@ class FeedbackState extends Equatable {
     this.description = '',
     this.category,
     this.availableCategories = const [],
+    this.attachments = const [],
     this.submissionResult,
     this.errorMessage,
   });
@@ -37,6 +40,8 @@ class FeedbackState extends Equatable {
   bool get isFailure => status == FeedbackFormStatus.failure;
   bool get canSubmit =>
       title.trim().isNotEmpty && status != FeedbackFormStatus.submitting;
+  bool get canAddAttachment =>
+      attachments.length < 3 && status != FeedbackFormStatus.submitting;
 
   FeedbackState copyWith({
     FeedbackFormStatus? status,
@@ -45,6 +50,7 @@ class FeedbackState extends Equatable {
     String? description,
     String? Function()? category,
     List<String>? availableCategories,
+    List<ScreenshotAttachment>? attachments,
     FeedbackSubmitResult? submissionResult,
     String? errorMessage,
   }) {
@@ -55,6 +61,7 @@ class FeedbackState extends Equatable {
       description: description ?? this.description,
       category: category != null ? category() : this.category,
       availableCategories: availableCategories ?? this.availableCategories,
+      attachments: attachments ?? this.attachments,
       submissionResult: submissionResult ?? this.submissionResult,
       errorMessage: errorMessage ?? this.errorMessage,
     );
@@ -68,6 +75,7 @@ class FeedbackState extends Equatable {
         description,
         category,
         availableCategories,
+        attachments,
         submissionResult,
         errorMessage,
       ];

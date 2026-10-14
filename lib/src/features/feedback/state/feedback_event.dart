@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../../uploads/domain/entities/screenshot_attachment.dart';
 import '../domain/entities/feedback_type.dart';
 
 sealed class FeedbackEvent extends Equatable {
@@ -10,11 +11,15 @@ sealed class FeedbackEvent extends Equatable {
 
 final class FeedbackFormStarted extends FeedbackEvent {
   final FeedbackType initialType;
+  final List<ScreenshotAttachment> initialAttachments;
 
-  const FeedbackFormStarted({this.initialType = FeedbackType.bug});
+  const FeedbackFormStarted({
+    this.initialType = FeedbackType.bug,
+    this.initialAttachments = const [],
+  });
 
   @override
-  List<Object?> get props => [initialType];
+  List<Object?> get props => [initialType, initialAttachments];
 }
 
 final class FeedbackTypeChanged extends FeedbackEvent {
@@ -51,6 +56,24 @@ final class FeedbackCategoryChanged extends FeedbackEvent {
 
   @override
   List<Object?> get props => [category];
+}
+
+final class FeedbackAttachmentAdded extends FeedbackEvent {
+  final ScreenshotAttachment attachment;
+
+  const FeedbackAttachmentAdded(this.attachment);
+
+  @override
+  List<Object?> get props => [attachment];
+}
+
+final class FeedbackAttachmentRemoved extends FeedbackEvent {
+  final int index;
+
+  const FeedbackAttachmentRemoved(this.index);
+
+  @override
+  List<Object?> get props => [index];
 }
 
 final class FeedbackSubmitted extends FeedbackEvent {

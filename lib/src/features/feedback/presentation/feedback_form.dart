@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/styles.dart';
+import '../../uploads/domain/entities/screenshot_attachment.dart';
 import '../domain/entities/feedback_submit_result.dart';
 import '../domain/entities/feedback_type.dart';
 import '../state/feedback_bloc.dart';
@@ -10,8 +11,13 @@ import '../state/feedback_state.dart';
 /// Modal dialog providing the user interface for submitting feedback.
 class FeedbackFormDialog extends StatelessWidget {
   final VoidCallback? onDismiss;
+  final Future<ScreenshotAttachment?> Function()? onPickAttachment;
 
-  const FeedbackFormDialog({super.key, this.onDismiss});
+  const FeedbackFormDialog({
+    super.key,
+    this.onDismiss,
+    this.onPickAttachment,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -60,6 +66,10 @@ class FeedbackFormDialog extends StatelessWidget {
                   const _TitleField(),
                   const SizedBox(height: 16),
                   const _DescriptionField(),
+                  const SizedBox(height: 16),
+                  _ScreenshotAttachmentsSection(
+                    onPickAttachment: onPickAttachment,
+                  ),
                   if (state.errorMessage != null) ...[
                     const SizedBox(height: 12),
                     Text(
@@ -402,3 +412,168 @@ class _SuccessView extends StatelessWidget {
     );
   }
 }
+
+class _ScreenshotAttachmentsSection extends StatelessWidget {
+  final Future<ScreenshotAttachment?> Function()? onPickAttachment;
+
+  const _ScreenshotAttachmentsSection({this.onPickAttachment});
+
+  @override
+  Widget build(BuildContext context) {
+    final attachments =
+        context.select((FeedbackBloc b) => b.state.attachments);
+    final canAdd =
+        context.select((FeedbackBloc b) => b.state.canAddAttachment);
+
+    if (attachments.isEmpty && onPickAttachment == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('Screenshots (optional)', style: AppStyles.labelMedium),
+            Text('${attachments.length}/3', style: AppStyles.bodySmall),
+          ],
+        ),
+        const SizedBox(height: 8),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              for (int i = 0; i < attachments.length; i++)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: _AttachmentThumbnail(
+                    index: i,
+                    attachment: attachments[i],
+                  ),
+                ),
+              if (canAdd && onPickAttachment != null)
+                _AddAttachmentButton(
+                  onTap: () async {
+                    final picked = await onPickAttachment!();
+                    if (picked != null && context.mounted) {
+                      context
+                          .read<FeedbackBloc>()
+                          .add(FeedbackAttachmentAdded(picked));
+                    }
+                  },
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AttachmentThumbnail extends StatelessWidget {
+  final int index;
+  final ScreenshotAttachment attachment;
+
+  const _AttachmentThumbnail({
+    required this.index,
+    required this.attachment,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          width: 64,
+          height: 64,
+          decoration: BoxDecoration(
+            color: const Color(0xFFF3F4F6),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFFE5E7EB)),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: attachment.bytes.isNotEmpty
+              ? Image.memory(
+                  attachment.bytes,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const Icon(
+                    Icons.image,
+                    color: Color(0xFF9CA3AF),
+                  ),
+                )
+              : const Icon(
+                  Icons.image,
+                  color: Color(0xFF9CA3AF),
+                ),
+        ),
+        Positioned(
+          top: -4,
+          right: -4,
+          child: GestureDetector(
+            key: Key('feedback_remove_attachment_$index'),
+            onTap: () {
+              context
+                  .read<FeedbackBloc>()
+                  .add(FeedbackAttachmentRemoved(index));
+            },
+            child: Container(
+              padding: const EdgeInsets.all(2),
+              decoration: const BoxDecoration(
+                color: Color(0xFF1F2937),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.close,
+                size: 12,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AddAttachmentButton extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _AddAttachmentButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      key: const Key('feedback_add_attachment_button'),
+      onTap: onTap,
+      child: Container(
+        width: 64,
+        height: 64,
+        decoration: BoxDecoration(
+          color: const Color(0xFFF9FAFB),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: const Color(0xFFD1D5DB),
+          ),
+        ),
+        child: const Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.add_photo_alternate_outlined,
+              size: 20,
+              color: Color(0xFF6B7280),
+            ),
+            SizedBox(height: 2),
+            Text(
+              'Add',
+              style: AppStyles.labelSmall,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+

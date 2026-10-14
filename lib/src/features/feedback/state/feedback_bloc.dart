@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../uploads/domain/entities/screenshot_attachment.dart';
 import '../domain/entities/feedback_submit_result.dart';
 import '../domain/entities/feedback_type.dart';
 import '../domain/usecases/get_sdk_config_usecase.dart';
@@ -10,6 +11,7 @@ typedef FeedbackSubmitHandler = Future<FeedbackSubmitResult> Function({
   required String title,
   required String description,
   String? category,
+  List<ScreenshotAttachment> attachments,
 });
 
 /// BLoC managing interactive feedback form state, validation, and submission.
@@ -31,6 +33,8 @@ class FeedbackBloc extends Bloc<FeedbackEvent, FeedbackState> {
     on<FeedbackTitleChanged>(_onTitleChanged);
     on<FeedbackDescriptionChanged>(_onDescriptionChanged);
     on<FeedbackCategoryChanged>(_onCategoryChanged);
+    on<FeedbackAttachmentAdded>(_onAttachmentAdded);
+    on<FeedbackAttachmentRemoved>(_onAttachmentRemoved);
     on<FeedbackSubmitted>(_onSubmitted);
     on<FeedbackReset>(_onReset);
   }
@@ -42,6 +46,7 @@ class FeedbackBloc extends Bloc<FeedbackEvent, FeedbackState> {
     emit(state.copyWith(
       status: FeedbackFormStatus.loadingConfig,
       type: event.initialType,
+      attachments: event.initialAttachments,
     ));
 
     List<String> categories = const [];
@@ -89,6 +94,46 @@ class FeedbackBloc extends Bloc<FeedbackEvent, FeedbackState> {
     emit(state.copyWith(category: () => event.category));
   }
 
+  void _onAttachmentAdded(
+    FeedbackAttachmentAdded event,
+    Emitter<FeedbackState> emit,
+  ) {
+    if (state.attachments.length >= 3) {
+      emit(state.copyWith(
+        errorMessage: 'Cannot attach more than 3 screenshots.',
+      ));
+      return;
+    }
+
+    try {
+      event.attachment.validate();
+    } catch (e) {
+      emit(state.copyWith(
+        errorMessage: e.toString(),
+      ));
+      return;
+    }
+
+    emit(state.copyWith(
+      attachments: [...state.attachments, event.attachment],
+      errorMessage: null,
+    ));
+  }
+
+  void _onAttachmentRemoved(
+    FeedbackAttachmentRemoved event,
+    Emitter<FeedbackState> emit,
+  ) {
+    if (event.index >= 0 && event.index < state.attachments.length) {
+      final updated = List<ScreenshotAttachment>.from(state.attachments)
+        ..removeAt(event.index);
+      emit(state.copyWith(
+        attachments: updated,
+        errorMessage: null,
+      ));
+    }
+  }
+
   Future<void> _onSubmitted(
     FeedbackSubmitted event,
     Emitter<FeedbackState> emit,
@@ -106,6 +151,7 @@ class FeedbackBloc extends Bloc<FeedbackEvent, FeedbackState> {
         title: state.title.trim(),
         description: state.description.trim(),
         category: state.category,
+        attachments: state.attachments,
       );
 
       emit(state.copyWith(

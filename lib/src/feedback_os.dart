@@ -29,6 +29,12 @@ import 'features/feedback/domain/usecases/submit_feedback_usecase.dart';
 import 'features/feedback/presentation/feedback_form.dart';
 import 'features/feedback/state/feedback_bloc.dart';
 import 'features/feedback/state/feedback_event.dart';
+import 'features/uploads/data/datasources/binary_uploader.dart';
+import 'features/uploads/data/datasources/upload_remote_data_source.dart';
+import 'features/uploads/data/repositories/upload_repository_impl.dart';
+import 'features/uploads/domain/entities/screenshot_attachment.dart';
+import 'features/uploads/domain/repositories/upload_repository.dart';
+import 'features/uploads/domain/usecases/upload_screenshot_use_case.dart';
 import 'identity/device_id_store.dart';
 import 'identity/device_info_provider.dart';
 
@@ -50,11 +56,13 @@ class FeedbackOS {
   QueueSyncEngine? _queueSyncEngine;
   FeedbackOsHttpClient? _httpClient;
   FeedbackRepository? _repository;
+  UploadRepository? _uploadRepository;
 
   GetSdkConfigUseCase? _getConfigUseCase;
   PingSdkUseCase? _pingUseCase;
   IdentifyUserUseCase? _identifyUseCase;
   SubmitFeedbackUseCase? _submitFeedbackUseCase;
+  UploadScreenshotUseCase? _uploadScreenshotUseCase;
 
   String? _activeExternalUserId;
 
@@ -91,6 +99,18 @@ class FeedbackOS {
     return _submissionStore!;
   }
 
+  /// Internal access to upload repository.
+  UploadRepository get uploadRepository {
+    _ensureInitialized();
+    return _uploadRepository!;
+  }
+
+  /// Internal access to upload screenshot use case.
+  UploadScreenshotUseCase get uploadScreenshotUseCase {
+    _ensureInitialized();
+    return _uploadScreenshotUseCase!;
+  }
+
   /// Initializes the FeedbackOS SDK.
   ///
   /// Safe to call repeatedly with the same [publishableKey].
@@ -102,6 +122,8 @@ class FeedbackOS {
     DeviceInfoProvider? deviceInfoProvider,
     SubmissionStore? submissionStore,
     FeedbackOsHttpClient? httpClient,
+    UploadRepository? uploadRepository,
+    BinaryUploader? binaryUploader,
   }) async {
     final sanitizedKey = publishableKey.trim();
 
@@ -148,10 +170,19 @@ class FeedbackOS {
     final remoteDataSource = FeedbackRemoteDataSourceImpl(client: _httpClient!);
     _repository = FeedbackRepositoryImpl(remoteDataSource: remoteDataSource);
 
+    final uploadRemoteDataSource =
+        UploadRemoteDataSourceImpl(client: _httpClient!);
+    _uploadRepository = uploadRepository ??
+        UploadRepositoryImpl(
+          remoteDataSource: uploadRemoteDataSource,
+          binaryUploader: binaryUploader ?? DioBinaryUploader(),
+        );
+
     _getConfigUseCase = GetSdkConfigUseCase(_repository!);
     _pingUseCase = PingSdkUseCase(_repository!);
     _identifyUseCase = IdentifyUserUseCase(_repository!);
     _submitFeedbackUseCase = SubmitFeedbackUseCase(_repository!);
+    _uploadScreenshotUseCase = UploadScreenshotUseCase(_uploadRepository!);
 
     _queueSyncEngine = QueueSyncEngine(
       store: _submissionStore!,
@@ -235,6 +266,22 @@ class FeedbackOS {
     await identify(externalUserId: null, cancelToken: cancelToken);
   }
 
+  /// Uploads a screenshot attachment directly to the presigned storage URL.
+  Future<String> uploadScreenshot({
+    required ScreenshotAttachment attachment,
+    CancelToken? cancelToken,
+  }) async {
+    _ensureInitialized();
+    final result = await _uploadScreenshotUseCase!.call(
+      attachment: attachment,
+      cancelToken: cancelToken,
+    );
+    return result.fold(
+      (failure) => throw _mapFailureToException(failure),
+      (uploadId) => uploadId,
+    );
+  }
+
   /// Submits feedback (bug or feature request) following persist-before-send delivery.
   ///
   /// 1. Validates local payload bounds.
@@ -247,12 +294,32 @@ class FeedbackOS {
     required String title,
     String description = '',
     String? category,
+    List<ScreenshotAttachment> attachments = const [],
     List<String> screenshotUploadIds = const [],
     String? clientSubmissionId,
     FeedbackDeviceInfo? customDeviceInfo,
     CancelToken? cancelToken,
   }) async {
     _ensureInitialized();
+
+    final effectiveUploadIds = List<String>.from(screenshotUploadIds);
+    if (attachments.isNotEmpty) {
+      for (final attachment in attachments) {
+        if (attachment.uploadId != null) {
+          effectiveUploadIds.add(attachment.uploadId!);
+        } else {
+          final uploadResult = await _uploadScreenshotUseCase!.call(
+            attachment: attachment,
+            cancelToken: cancelToken,
+          );
+          final uploadId = uploadResult.fold(
+            (failure) => throw _mapFailureToException(failure),
+            (id) => id,
+          );
+          effectiveUploadIds.add(uploadId);
+        }
+      }
+    }
 
     final submissionId = clientSubmissionId ?? const Uuid().v4().toLowerCase();
     final device =
@@ -265,7 +332,7 @@ class FeedbackOS {
       description: description,
       category: category,
       device: device,
-      screenshotUploadIds: screenshotUploadIds,
+      screenshotUploadIds: effectiveUploadIds,
     );
 
     try {
@@ -414,6 +481,8 @@ class FeedbackOS {
   Future<FeedbackSubmitResult?> showFeedback({
     required BuildContext context,
     FeedbackType initialType = FeedbackType.bug,
+    List<ScreenshotAttachment> initialAttachments = const [],
+    Future<ScreenshotAttachment?> Function()? onPickAttachment,
     FeedbackBloc? customBloc,
   }) async {
     _ensureInitialized();
@@ -425,18 +494,23 @@ class FeedbackOS {
             required title,
             required description,
             category,
+            attachments = const [],
           }) =>
               submitFeedback(
             type: type,
             title: title,
             description: description,
             category: category,
+            attachments: attachments,
           ),
           getConfigUseCase: _getConfigUseCase,
           publishableKey: _publishableKey,
         );
 
-    bloc.add(FeedbackFormStarted(initialType: initialType));
+    bloc.add(FeedbackFormStarted(
+      initialType: initialType,
+      initialAttachments: initialAttachments,
+    ));
 
     return showDialog<FeedbackSubmitResult>(
       context: context,
@@ -444,7 +518,9 @@ class FeedbackOS {
       builder: (dialogContext) {
         return BlocProvider<FeedbackBloc>.value(
           value: bloc,
-          child: const FeedbackFormDialog(),
+          child: FeedbackFormDialog(
+            onPickAttachment: onPickAttachment,
+          ),
         );
       },
     );
@@ -467,10 +543,12 @@ class FeedbackOS {
     _queueSyncEngine = null;
     _httpClient = null;
     _repository = null;
+    _uploadRepository = null;
     _getConfigUseCase = null;
     _pingUseCase = null;
     _identifyUseCase = null;
     _submitFeedbackUseCase = null;
+    _uploadScreenshotUseCase = null;
     _activeExternalUserId = null;
   }
 
@@ -494,6 +572,14 @@ class FeedbackOS {
       PayloadTooLargeFailure() => FeedbackOsPayloadTooLargeException(
           failure.message,
           statusCode: failure.statusCode ?? 413,
+        ),
+      UploadNotFoundFailure() => FeedbackOsUploadNotFoundException(
+          failure.message,
+          statusCode: failure.statusCode ?? 404,
+        ),
+      UploadInvalidFailure() => FeedbackOsUploadInvalidException(
+          failure.message,
+          statusCode: failure.statusCode ?? 422,
         ),
       RateLimitFailure() => FeedbackOsRateLimitException(
           failure.message,

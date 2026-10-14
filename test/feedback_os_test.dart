@@ -1,8 +1,13 @@
+import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:feedback_os_flutter/feedback_os_flutter.dart';
+import 'package:feedback_os_flutter/src/core/network/api_endpoints.dart';
 import 'package:feedback_os_flutter/src/core/network/feedback_os_dio_client.dart';
+import 'package:feedback_os_flutter/src/features/uploads/data/datasources/binary_uploader.dart';
+import 'package:feedback_os_flutter/src/features/uploads/data/datasources/upload_remote_data_source.dart';
+import 'package:feedback_os_flutter/src/features/uploads/data/repositories/upload_repository_impl.dart';
 
 class MockFeedbackOsHttpClient extends Mock implements FeedbackOsHttpClient {}
 
@@ -384,5 +389,82 @@ void main() {
         throwsA(isA<FeedbackOsStorageException>()),
       );
     });
+
+    test('uploadScreenshot reserves and transmits binary data', () async {
+      await FeedbackOS.instance.initialize(
+        publishableKey: testKey,
+        deviceIdStore: inMemoryDeviceStore,
+        submissionStore: inMemorySubmissionStore,
+        httpClient: mockHttpClient,
+        deviceInfoProvider: const StaticDeviceInfoProvider(),
+      );
+
+      when(
+        () => mockHttpClient.post<Map<String, dynamic>>(
+          ApiEndpoints.uploads,
+          data: any(named: 'data'),
+          queryParameters: any(named: 'queryParameters'),
+          options: any(named: 'options'),
+          cancelToken: any(named: 'cancelToken'),
+          includeAuthHeaders: any(named: 'includeAuthHeaders'),
+        ),
+      ).thenAnswer(
+        (_) async => Response(
+          requestOptions: RequestOptions(path: ApiEndpoints.uploads),
+          statusCode: 201,
+          data: {
+            'upload_id': 'upload-uuid-456',
+            'method': 'PUT',
+            'url': 'https://r2.storage.feedbackos.dev/screen.png',
+            'headers': {'content-type': 'image/png'},
+            'expires_at': DateTime.now()
+                .add(const Duration(minutes: 15))
+                .toIso8601String(),
+          },
+        ),
+      );
+
+      final dummyUploader = _FakeBinaryUploader();
+      final uploadRepo = UploadRepositoryImpl(
+        remoteDataSource: UploadRemoteDataSourceImpl(client: mockHttpClient),
+        binaryUploader: dummyUploader,
+      );
+
+      await FeedbackOS.instance.reset();
+      await FeedbackOS.instance.initialize(
+        publishableKey: testKey,
+        deviceIdStore: inMemoryDeviceStore,
+        submissionStore: inMemorySubmissionStore,
+        httpClient: mockHttpClient,
+        deviceInfoProvider: const StaticDeviceInfoProvider(),
+        uploadRepository: uploadRepo,
+      );
+
+      final attachment = ScreenshotAttachment(
+        fileName: 'screen.png',
+        contentType: 'image/png',
+        bytes: Uint8List.fromList([10, 20, 30]),
+      );
+
+      final uploadId = await FeedbackOS.instance.uploadScreenshot(
+        attachment: attachment,
+      );
+
+      expect(uploadId, equals('upload-uuid-456'));
+      expect(dummyUploader.uploadedBytes, equals(Uint8List.fromList([10, 20, 30])));
+    });
   });
+}
+
+class _FakeBinaryUploader implements BinaryUploader {
+  Uint8List? uploadedBytes;
+
+  @override
+  Future<void> uploadBinary({
+    required UploadReservation reservation,
+    required Uint8List bytes,
+    CancelToken? cancelToken,
+  }) async {
+    uploadedBytes = bytes;
+  }
 }

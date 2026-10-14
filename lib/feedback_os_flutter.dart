@@ -39,6 +39,8 @@ export 'src/features/feedback/state/feedback_event.dart'
         FeedbackTitleChanged,
         FeedbackDescriptionChanged,
         FeedbackCategoryChanged,
+        FeedbackAttachmentAdded,
+        FeedbackAttachmentRemoved,
         FeedbackSubmitted,
         FeedbackReset;
 export 'src/features/feedback/state/feedback_state.dart'

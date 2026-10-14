@@ -1,15 +1,16 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:feedback_os_flutter/feedback_os_flutter.dart';
 
 void main() {
-  Widget buildTestableWidget(FeedbackBloc bloc) {
+  Widget buildTestableWidget(FeedbackBloc bloc, {Future<ScreenshotAttachment?> Function()? onPick}) {
     return MaterialApp(
       home: Scaffold(
         body: BlocProvider<FeedbackBloc>.value(
           value: bloc,
-          child: const FeedbackFormDialog(),
+          child: FeedbackFormDialog(onPickAttachment: onPick),
         ),
       ),
     );
@@ -24,6 +25,7 @@ void main() {
           required title,
           required description,
           category,
+          attachments = const [],
         }) async =>
             const FeedbackSubmitResult(
           status: FeedbackSubmitStatus.sent,
@@ -56,6 +58,7 @@ void main() {
           required title,
           required description,
           category,
+          attachments = const [],
         }) async =>
             const FeedbackSubmitResult(
           status: FeedbackSubmitStatus.sent,
@@ -66,17 +69,16 @@ void main() {
       await tester.pumpWidget(buildTestableWidget(bloc));
       await tester.pumpAndSettle();
 
-      // Enter title
       await tester.enterText(
         find.byKey(const Key('feedback_title_field')),
-        'Login button broken',
+        'App crashed on login',
       );
       await tester.pumpAndSettle();
 
       final submitBtn = tester.widget<ElevatedButton>(
         find.byKey(const Key('feedback_submit_button')),
       );
-      expect(submitBtn.onPressed, isNotNull);
+      expect(submitBtn.onPressed, isNotNull); // enabled now
 
       // Toggle to Feature
       await tester.tap(find.byKey(const Key('feedback_type_feature')));
@@ -92,6 +94,7 @@ void main() {
           required title,
           required description,
           category,
+          attachments = const [],
         }) async =>
             const FeedbackSubmitResult(
           status: FeedbackSubmitStatus.sent,
@@ -125,6 +128,7 @@ void main() {
           required title,
           required description,
           category,
+          attachments = const [],
         }) async =>
             const FeedbackSubmitResult(
           status: FeedbackSubmitStatus.queued,
@@ -146,6 +150,52 @@ void main() {
 
       expect(find.text('Saved for Later'), findsOneWidget);
       expect(find.textContaining('saved offline'), findsOneWidget);
+    });
+
+    testWidgets('picking and removing screenshot attachments works',
+        (tester) async {
+      final bloc = FeedbackBloc(
+        submitHandler: ({
+          required type,
+          required title,
+          required description,
+          category,
+          attachments = const [],
+        }) async =>
+            const FeedbackSubmitResult(
+          status: FeedbackSubmitStatus.sent,
+          clientSubmissionId: 'sub_1',
+        ),
+      );
+
+      final dummyAttachment = ScreenshotAttachment(
+        fileName: 'screen.png',
+        contentType: 'image/png',
+        bytes: Uint8List.fromList([1, 2, 3]),
+      );
+
+      await tester.pumpWidget(
+        buildTestableWidget(bloc, onPick: () async => dummyAttachment),
+      );
+      await tester.pumpAndSettle();
+
+      // Tap Add attachment button
+      expect(find.byKey(const Key('feedback_add_attachment_button')),
+          findsOneWidget);
+      await tester.tap(find.byKey(const Key('feedback_add_attachment_button')));
+      await tester.pumpAndSettle();
+
+      expect(bloc.state.attachments.length, 1);
+      expect(find.text('1/3'), findsOneWidget);
+      expect(find.byKey(const Key('feedback_remove_attachment_0')),
+          findsOneWidget);
+
+      // Tap remove attachment
+      await tester.tap(find.byKey(const Key('feedback_remove_attachment_0')));
+      await tester.pumpAndSettle();
+
+      expect(bloc.state.attachments.length, 0);
+      expect(find.text('0/3'), findsOneWidget);
     });
   });
 }
