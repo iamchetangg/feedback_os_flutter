@@ -79,6 +79,14 @@ final class StorageFailure extends Failure {
   const StorageFailure(super.message) : super(code: 'storage_error');
 }
 
+final class FeatureDisabledFailure extends Failure {
+  const FeatureDisabledFailure(
+    super.message, {
+    super.code = 'feature_disabled',
+    super.statusCode = 403,
+  });
+}
+
 final class ServerFailure extends Failure {
   const ServerFailure(
     super.message, {
