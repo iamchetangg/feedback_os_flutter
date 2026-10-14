@@ -83,7 +83,6 @@ void main() {
       );
       await tester.pump();
 
-
       expect(find.text('Community Board'), findsOneWidget);
       expect(find.text('Dark Mode Support'), findsOneWidget);
       expect(find.text('Support dark mode please'), findsOneWidget);

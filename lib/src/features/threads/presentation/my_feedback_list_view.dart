@@ -130,13 +130,15 @@ class MyFeedbackListView extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: isBug ? const Color(0xFFFEE2E2) : const Color(0xFFEEF2FF),
+                color:
+                    isBug ? const Color(0xFFFEE2E2) : const Color(0xFFEEF2FF),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
                 isBug ? Icons.bug_report_outlined : Icons.lightbulb_outline,
                 size: 20,
-                color: isBug ? const Color(0xFFDC2626) : const Color(0xFF4F46E5),
+                color:
+                    isBug ? const Color(0xFFDC2626) : const Color(0xFF4F46E5),
               ),
             ),
             const SizedBox(width: 12),
@@ -225,7 +227,8 @@ class MyFeedbackListView extends StatelessWidget {
       ),
       child: Text(
         status.replaceAll('_', ' '),
-        style: AppStyles.labelSmall.copyWith(color: fg, fontWeight: FontWeight.w600),
+        style: AppStyles.labelSmall
+            .copyWith(color: fg, fontWeight: FontWeight.w600),
       ),
     );
   }

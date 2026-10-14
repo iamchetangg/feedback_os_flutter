@@ -50,13 +50,15 @@ class RoadmapView extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.error_outline, size: 48, color: Color(0xFFDC2626)),
+                    const Icon(Icons.error_outline,
+                        size: 48, color: Color(0xFFDC2626)),
                     const SizedBox(height: 12),
                     Text(state.errorMessage ?? 'Failed to load roadmap',
                         style: AppStyles.bodyMedium),
                     const SizedBox(height: 16),
                     ElevatedButton(
-                      onPressed: () => context.read<BoardBloc>().add(const RoadmapStarted()),
+                      onPressed: () =>
+                          context.read<BoardBloc>().add(const RoadmapStarted()),
                       child: const Text('Retry'),
                     ),
                   ],
@@ -108,7 +110,8 @@ class RoadmapView extends StatelessWidget {
                   ),
                   Row(
                     children: [
-                      const Icon(Icons.thumb_up_alt_outlined, size: 14, color: Color(0xFF6B7280)),
+                      const Icon(Icons.thumb_up_alt_outlined,
+                          size: 14, color: Color(0xFF6B7280)),
                       const SizedBox(width: 4),
                       Text('${item.voteCount}', style: AppStyles.labelSmall),
                     ],
@@ -127,7 +130,8 @@ class RoadmapView extends StatelessWidget {
               if (item.category != null) ...[
                 const SizedBox(height: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF3F4F6),
                     borderRadius: BorderRadius.circular(6),

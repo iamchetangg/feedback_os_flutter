@@ -71,7 +71,8 @@ class _ThreadDetailViewState extends State<ThreadDetailView> {
           }
         },
         builder: (context, state) {
-          if (state.status == ThreadsStatus.loading && state.selectedThread == null) {
+          if (state.status == ThreadsStatus.loading &&
+              state.selectedThread == null) {
             return const Center(child: CircularProgressIndicator());
           }
 
@@ -223,7 +224,8 @@ class _ThreadDetailViewState extends State<ThreadDetailView> {
             color: isAdmin ? const Color(0xFFEEF2FF) : Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: isAdmin ? const Color(0xFFC7D2FE) : const Color(0xFFE5E7EB),
+              color:
+                  isAdmin ? const Color(0xFFC7D2FE) : const Color(0xFFE5E7EB),
             ),
           ),
           child: Column(
@@ -236,7 +238,9 @@ class _ThreadDetailViewState extends State<ThreadDetailView> {
                     isAdmin ? 'FeedbackOS Team' : 'You',
                     style: AppStyles.labelSmall.copyWith(
                       fontWeight: FontWeight.w700,
-                      color: isAdmin ? const Color(0xFF4338CA) : const Color(0xFF374151),
+                      color: isAdmin
+                          ? const Color(0xFF4338CA)
+                          : const Color(0xFF374151),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -268,7 +272,8 @@ class _ThreadDetailViewState extends State<ThreadDetailView> {
                 controller: _replyController,
                 decoration: InputDecoration(
                   hintText: 'Type your reply...',
-                  hintStyle: AppStyles.bodyMedium.copyWith(color: const Color(0xFF9CA3AF)),
+                  hintStyle: AppStyles.bodyMedium
+                      .copyWith(color: const Color(0xFF9CA3AF)),
                   filled: true,
                   fillColor: const Color(0xFFF9FAFB),
                   contentPadding:

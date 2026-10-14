@@ -219,7 +219,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 24),
 
-
             // Identity & Offline Actions
             const Text(
               'Identity & Queue Control',

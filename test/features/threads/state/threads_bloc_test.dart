@@ -64,7 +64,8 @@ void main() {
     test('MyItemsStarted loads items and unread count', () async {
       when(() => mockGetMyItems.call(cancelToken: any(named: 'cancelToken')))
           .thenAnswer((_) async => Right([testItem]));
-      when(() => mockGetUnreadCount.call(cancelToken: any(named: 'cancelToken')))
+      when(() =>
+              mockGetUnreadCount.call(cancelToken: any(named: 'cancelToken')))
           .thenAnswer((_) async => const Right(UnreadCount(count: 3)));
 
       bloc.add(const MyItemsStarted());

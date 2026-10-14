@@ -32,7 +32,8 @@ class BoardView extends StatelessWidget {
           if (state.errorMessage != null) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(state.errorMessage!, style: AppStyles.labelMedium.copyWith(color: Colors.white)),
+                content: Text(state.errorMessage!,
+                    style: AppStyles.labelMedium.copyWith(color: Colors.white)),
                 backgroundColor: const Color(0xFFDC2626),
               ),
             );
@@ -98,7 +99,8 @@ class BoardView extends StatelessWidget {
                 style: AppStyles.bodyMedium),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () => context.read<BoardBloc>().add(BoardStarted(sort: state.sort)),
+              onPressed: () =>
+                  context.read<BoardBloc>().add(BoardStarted(sort: state.sort)),
               child: const Text('Retry'),
             ),
           ],
@@ -120,7 +122,8 @@ class BoardView extends StatelessWidget {
         if (index >= state.items.length) {
           return Center(
             child: TextButton.icon(
-              onPressed: () => context.read<BoardBloc>().add(const BoardNextPageRequested()),
+              onPressed: () =>
+                  context.read<BoardBloc>().add(const BoardNextPageRequested()),
               icon: const Icon(Icons.expand_more),
               label: const Text('Load More'),
             ),
@@ -182,25 +185,29 @@ class BoardView extends StatelessWidget {
                   children: [
                     if (item.category != null) ...[
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
                           color: const Color(0xFFF3F4F6),
                           borderRadius: BorderRadius.circular(6),
                         ),
-                        child: Text(item.category!, style: AppStyles.labelSmall),
+                        child:
+                            Text(item.category!, style: AppStyles.labelSmall),
                       ),
                       const SizedBox(width: 8),
                     ],
                     if (item.isMine)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
                           color: const Color(0xFFEEF2FF),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
                           'You submitted',
-                          style: AppStyles.labelSmall.copyWith(color: const Color(0xFF4F46E5)),
+                          style: AppStyles.labelSmall
+                              .copyWith(color: const Color(0xFF4F46E5)),
                         ),
                       ),
                   ],
@@ -236,13 +243,16 @@ class BoardView extends StatelessWidget {
             Icon(
               Icons.keyboard_arrow_up,
               size: 20,
-              color: hasVoted ? const Color(0xFF4F46E5) : const Color(0xFF6B7280),
+              color:
+                  hasVoted ? const Color(0xFF4F46E5) : const Color(0xFF6B7280),
             ),
             Text(
               '${item.voteCount}',
               style: AppStyles.labelSmall.copyWith(
                 fontWeight: FontWeight.w700,
-                color: hasVoted ? const Color(0xFF4F46E5) : const Color(0xFF374151),
+                color: hasVoted
+                    ? const Color(0xFF4F46E5)
+                    : const Color(0xFF374151),
               ),
             ),
           ],
@@ -280,7 +290,8 @@ class BoardView extends StatelessWidget {
       ),
       child: Text(
         status.replaceAll('_', ' '),
-        style: AppStyles.labelSmall.copyWith(color: fg, fontWeight: FontWeight.w600),
+        style: AppStyles.labelSmall
+            .copyWith(color: fg, fontWeight: FontWeight.w600),
       ),
     );
   }

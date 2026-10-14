@@ -58,8 +58,7 @@ export 'src/features/board/state/board_event.dart'
         BoardNextPageRequested,
         BoardItemVoteToggled,
         RoadmapStarted;
-export 'src/features/board/state/board_state.dart'
-    show BoardState, BoardStatus;
+export 'src/features/board/state/board_state.dart' show BoardState, BoardStatus;
 
 // Threads Presentation & State (BLoC)
 export 'src/features/threads/presentation/my_feedback_list_view.dart'
@@ -76,7 +75,6 @@ export 'src/features/threads/state/threads_event.dart'
         ThreadReadMarked;
 export 'src/features/threads/state/threads_state.dart'
     show ThreadsState, ThreadsStatus;
-
 
 // Offline Queue Entities & Contracts
 export 'src/features/feedback/domain/entities/queued_feedback.dart'

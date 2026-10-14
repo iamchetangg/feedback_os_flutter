@@ -16,7 +16,8 @@ final appRouter = GoRouter(
       path: '/board',
       name: RouteNames.board,
       builder: (context, state) {
-        final bloc = FeedbackOS.instance.createBoardBloc()..add(const BoardStarted());
+        final bloc = FeedbackOS.instance.createBoardBloc()
+          ..add(const BoardStarted());
         return BlocProvider<BoardBloc>.value(
           value: bloc,
           child: BoardView(onBack: () => context.pop()),
@@ -27,7 +28,8 @@ final appRouter = GoRouter(
       path: '/roadmap',
       name: RouteNames.roadmap,
       builder: (context, state) {
-        final bloc = FeedbackOS.instance.createBoardBloc()..add(const RoadmapStarted());
+        final bloc = FeedbackOS.instance.createBoardBloc()
+          ..add(const RoadmapStarted());
         return BlocProvider<BoardBloc>.value(
           value: bloc,
           child: RoadmapView(onBack: () => context.pop()),
@@ -38,7 +40,8 @@ final appRouter = GoRouter(
       path: '/my-feedback',
       name: RouteNames.myFeedback,
       builder: (context, state) {
-        final bloc = FeedbackOS.instance.createThreadsBloc()..add(const MyItemsStarted());
+        final bloc = FeedbackOS.instance.createThreadsBloc()
+          ..add(const MyItemsStarted());
         return BlocProvider<ThreadsBloc>.value(
           value: bloc,
           child: MyFeedbackListView(
@@ -58,13 +61,11 @@ final appRouter = GoRouter(
       name: RouteNames.threadDetail,
       builder: (context, state) {
         final id = state.pathParameters['id']!;
-        final bloc = FeedbackOS.instance.createThreadsBloc()..add(ThreadDetailStarted(id));
+        final bloc = FeedbackOS.instance.createThreadsBloc()
+          ..add(ThreadDetailStarted(id));
         return BlocProvider<ThreadsBloc>.value(
           value: bloc,
-          child: ThreadDetailView(
-            itemId: id,
-            onBack: () => context.pop(),
-          ),
+          child: ThreadDetailView(itemId: id, onBack: () => context.pop()),
         );
       },
     ),
