@@ -46,6 +46,38 @@ export 'src/features/feedback/state/feedback_event.dart'
 export 'src/features/feedback/state/feedback_state.dart'
     show FeedbackState, FeedbackFormStatus;
 
+// Board Presentation & State (BLoC)
+export 'src/features/board/presentation/board_view.dart' show BoardView;
+export 'src/features/board/presentation/roadmap_view.dart' show RoadmapView;
+export 'src/features/board/state/board_bloc.dart' show BoardBloc;
+export 'src/features/board/state/board_event.dart'
+    show
+        BoardEvent,
+        BoardStarted,
+        BoardSortChanged,
+        BoardNextPageRequested,
+        BoardItemVoteToggled,
+        RoadmapStarted;
+export 'src/features/board/state/board_state.dart'
+    show BoardState, BoardStatus;
+
+// Threads Presentation & State (BLoC)
+export 'src/features/threads/presentation/my_feedback_list_view.dart'
+    show MyFeedbackListView;
+export 'src/features/threads/presentation/thread_detail_view.dart'
+    show ThreadDetailView;
+export 'src/features/threads/state/threads_bloc.dart' show ThreadsBloc;
+export 'src/features/threads/state/threads_event.dart'
+    show
+        ThreadsEvent,
+        MyItemsStarted,
+        ThreadDetailStarted,
+        ThreadReplySubmitted,
+        ThreadReadMarked;
+export 'src/features/threads/state/threads_state.dart'
+    show ThreadsState, ThreadsStatus;
+
+
 // Offline Queue Entities & Contracts
 export 'src/features/feedback/domain/entities/queued_feedback.dart'
     show QueuedFeedback, QueueStatus;

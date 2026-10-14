@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:feedback_os_flutter/feedback_os_flutter.dart';
+import 'package:go_router/go_router.dart';
 import 'router/app_router.dart';
+import 'router/route_names.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -191,6 +193,32 @@ class _HomeScreenState extends State<HomeScreen> {
               onPressed: () => _openFeedback(FeedbackType.feature),
             ),
             const SizedBox(height: 24),
+
+            // Community, Roadmap & Threads
+            const Text(
+              'Community, Roadmap & Threads',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.dashboard_outlined),
+              label: const Text('Community Feature Board'),
+              onPressed: () => context.pushNamed(RouteNames.board),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.map_outlined),
+              label: const Text('Product Roadmap'),
+              onPressed: () => context.pushNamed(RouteNames.roadmap),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.forum_outlined),
+              label: const Text('My Feedback Threads'),
+              onPressed: () => context.pushNamed(RouteNames.myFeedback),
+            ),
+            const SizedBox(height: 24),
+
 
             // Identity & Offline Actions
             const Text(

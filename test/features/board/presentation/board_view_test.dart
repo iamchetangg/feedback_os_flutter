@@ -1,0 +1,96 @@
+import 'package:feedback_os_flutter/src/features/board/domain/entities/board_item.dart';
+import 'package:feedback_os_flutter/src/features/board/domain/entities/board_page.dart';
+import 'package:feedback_os_flutter/src/features/board/domain/usecases/get_board_use_case.dart';
+import 'package:feedback_os_flutter/src/features/board/domain/usecases/get_roadmap_use_case.dart';
+import 'package:feedback_os_flutter/src/features/board/domain/usecases/unvote_item_use_case.dart';
+import 'package:feedback_os_flutter/src/features/board/domain/usecases/vote_item_use_case.dart';
+import 'package:feedback_os_flutter/src/features/board/presentation/board_view.dart';
+import 'package:feedback_os_flutter/src/features/board/state/board_bloc.dart';
+import 'package:feedback_os_flutter/src/features/board/state/board_state.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:fpdart/fpdart.dart';
+import 'package:mocktail/mocktail.dart';
+
+class MockGetBoardUseCase extends Mock implements GetBoardUseCase {}
+
+class MockGetRoadmapUseCase extends Mock implements GetRoadmapUseCase {}
+
+class MockVoteItemUseCase extends Mock implements VoteItemUseCase {}
+
+class MockUnvoteItemUseCase extends Mock implements UnvoteItemUseCase {}
+
+void main() {
+  group('BoardView Widget Tests', () {
+    late MockGetBoardUseCase mockGetBoard;
+    late MockGetRoadmapUseCase mockGetRoadmap;
+    late MockVoteItemUseCase mockVote;
+    late MockUnvoteItemUseCase mockUnvote;
+    late BoardBloc bloc;
+
+    final testItem = BoardItem(
+      id: 'item_1',
+      title: 'Dark Mode Support',
+      description: 'Support dark mode please',
+      category: 'UI',
+      status: 'planned',
+      voteCount: 15,
+      hasVoted: false,
+      isMine: true,
+      createdAt: DateTime.parse('2026-10-14T00:00:00.000Z'),
+    );
+
+    setUp(() {
+      mockGetBoard = MockGetBoardUseCase();
+      mockGetRoadmap = MockGetRoadmapUseCase();
+      mockVote = MockVoteItemUseCase();
+      mockUnvote = MockUnvoteItemUseCase();
+
+      when(() => mockGetBoard(
+            sort: any(named: 'sort'),
+            cursor: any(named: 'cursor'),
+            limit: any(named: 'limit'),
+            cancelToken: any(named: 'cancelToken'),
+          )).thenAnswer(
+        (_) async => Right(BoardPage(items: [testItem])),
+      );
+
+      bloc = BoardBloc(
+        getBoardUseCase: mockGetBoard,
+        getRoadmapUseCase: mockGetRoadmap,
+        voteItemUseCase: mockVote,
+        unvoteItemUseCase: mockUnvote,
+        initialState: BoardState(
+          status: BoardStatus.success,
+          items: [testItem],
+        ),
+      );
+    });
+
+    tearDown(() {
+      bloc.close();
+    });
+
+    testWidgets('renders board items and sort chips', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: BlocProvider<BoardBloc>.value(
+            value: bloc,
+            child: const BoardView(),
+          ),
+        ),
+      );
+      await tester.pump();
+
+
+      expect(find.text('Community Board'), findsOneWidget);
+      expect(find.text('Dark Mode Support'), findsOneWidget);
+      expect(find.text('Support dark mode please'), findsOneWidget);
+      expect(find.text('UI'), findsOneWidget);
+      expect(find.text('planned'), findsOneWidget);
+      expect(find.text('You submitted'), findsOneWidget);
+      expect(find.text('15'), findsOneWidget);
+    });
+  });
+}

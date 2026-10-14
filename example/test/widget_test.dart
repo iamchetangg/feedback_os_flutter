@@ -19,5 +19,8 @@ void main() {
     expect(find.text('FeedbackOS Example'), findsOneWidget);
     expect(find.text('Report a Bug'), findsOneWidget);
     expect(find.text('Request a Feature'), findsOneWidget);
+    expect(find.text('Community Feature Board'), findsOneWidget);
+    expect(find.text('Product Roadmap'), findsOneWidget);
+    expect(find.text('My Feedback Threads'), findsOneWidget);
   });
 }

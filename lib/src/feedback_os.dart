@@ -56,6 +56,8 @@ import 'features/threads/domain/usecases/get_thread_detail_use_case.dart';
 import 'features/threads/domain/usecases/get_unread_count_use_case.dart';
 import 'features/threads/domain/usecases/mark_thread_read_use_case.dart';
 import 'features/threads/domain/usecases/send_reply_use_case.dart';
+import 'features/board/state/board_bloc.dart';
+import 'features/threads/state/threads_bloc.dart';
 import 'identity/device_id_store.dart';
 import 'identity/device_info_provider.dart';
 
@@ -776,7 +778,33 @@ class FeedbackOS {
     );
   }
 
+  /// Factory to instantiate a [BoardBloc] configured with SDK dependencies.
+  /// Adheres to Golden Rule 6 & 7 (dependency injection outside widgets).
+  BoardBloc createBoardBloc() {
+    _ensureInitialized();
+    return BoardBloc(
+      getBoardUseCase: _getBoardUseCase!,
+      getRoadmapUseCase: _getRoadmapUseCase!,
+      voteItemUseCase: _voteItemUseCase!,
+      unvoteItemUseCase: _unvoteItemUseCase!,
+    );
+  }
+
+  /// Factory to instantiate a [ThreadsBloc] configured with SDK dependencies.
+  /// Adheres to Golden Rule 6 & 7 (dependency injection outside widgets).
+  ThreadsBloc createThreadsBloc() {
+    _ensureInitialized();
+    return ThreadsBloc(
+      getMyItemsUseCase: _getMyItemsUseCase!,
+      getThreadDetailUseCase: _getThreadDetailUseCase!,
+      getUnreadCountUseCase: _getUnreadCountUseCase!,
+      sendReplyUseCase: _sendReplyUseCase!,
+      markThreadReadUseCase: _markThreadReadUseCase!,
+    );
+  }
+
   /// Resets the SDK state and closes storage connections.
+
   Future<void> reset() async {
     if (_submissionStore != null) {
       try {
