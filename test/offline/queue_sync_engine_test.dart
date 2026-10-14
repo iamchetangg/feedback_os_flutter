@@ -1,7 +1,11 @@
 import 'dart:convert';
+import 'dart:typed_data';
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:fpdart/fpdart.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:feedback_os_flutter/feedback_os_flutter.dart';
+import 'package:feedback_os_flutter/src/features/uploads/domain/repositories/upload_repository.dart';
 import 'package:feedback_os_flutter/src/features/feedback/data/datasources/feedback_remote_data_source.dart';
 import 'package:feedback_os_flutter/src/features/feedback/data/datasources/queue_sync_engine.dart';
 import 'package:feedback_os_flutter/src/features/feedback/data/models/feedback_item_model.dart';
@@ -201,5 +205,102 @@ void main() {
 
       expect(await store.getById('old_item'), isNull);
     });
+
+    test('re-reserves and uploads pending attachments during flushQueue', () async {
+      final fakeUploadRepo = _FakeUploadRepository();
+      final engineWithUploads = QueueSyncEngine(
+        store: store,
+        remoteDataSource: mockRemote,
+        options: FeedbackOSOptions(),
+        appScope: testScope,
+        getActiveUserId: () async => activeUserId,
+        setActiveUserId: (id) async => activeUserId = id,
+        uploadRepository: fakeUploadRepo,
+      );
+
+      final payloadWithAttachment = {
+        'client_submission_id': 'sub_offline_att_123',
+        'type': 'bug',
+        'title': 'Offline Attachment Bug',
+        'device': {
+          'os_version': 'Android 14',
+          'app_version': '1.0.0',
+          'device_model': 'Pixel 8',
+        },
+        'screenshot_upload_ids': <String>[],
+        'pending_attachments': [
+          {
+            'file_name': 'screenshot.png',
+            'content_type': 'image/png',
+            'bytes_base64': base64Encode([1, 2, 3, 4]),
+          }
+        ],
+      };
+
+      final queued = QueuedFeedback(
+        clientSubmissionId: 'sub_offline_att_123',
+        payloadJson: jsonEncode(payloadWithAttachment),
+        appScope: testScope,
+        createdAt: now,
+        nextAttemptAt: now,
+        status: QueueStatus.pending,
+      );
+      await store.insert(queued);
+
+      FeedbackSubmissionModel? capturedSubmission;
+      when(() => mockRemote.submitFeedback(any())).thenAnswer((invocation) async {
+        capturedSubmission = invocation.positionalArguments.first as FeedbackSubmissionModel;
+        return FeedbackItemModel(
+          id: 'server_item_999',
+          type: FeedbackType.bug,
+          title: 'Offline Attachment Bug',
+          description: '',
+          status: 'open',
+          isPublic: false,
+          createdAt: DateTime.utc(2026, 10, 13),
+        );
+      });
+
+      final sentCount = await engineWithUploads.flushQueue(currentClock: now);
+
+      expect(sentCount, equals(1));
+      expect(fakeUploadRepo.reservedContentType, equals('image/png'));
+      expect(fakeUploadRepo.reservedByteSize, equals(4));
+      expect(capturedSubmission?.screenshotUploadIds, equals(['fresh-upload-id-999']));
+      expect(await store.getById('sub_offline_att_123'), isNull);
+    });
   });
+}
+
+class _FakeUploadRepository implements UploadRepository {
+  String? reservedContentType;
+  int? reservedByteSize;
+
+  @override
+  Future<Either<Failure, UploadReservation>> reserveUpload({
+    required String contentType,
+    required int byteSize,
+    CancelToken? cancelToken,
+  }) async {
+    reservedContentType = contentType;
+    reservedByteSize = byteSize;
+    return Right(
+      UploadReservation(
+        uploadId: 'fresh-upload-id-999',
+        method: 'PUT',
+        url: Uri.parse('https://r2.feedbackos.dev/fresh.png'),
+        headers: const {'content-type': 'image/png'},
+        expiresAt: DateTime.now().add(const Duration(minutes: 15)),
+      ),
+    );
+  }
+
+  @override
+  Future<Either<Failure, Unit>> uploadBinary({
+    required UploadReservation reservation,
+    required Uint8List bytes,
+    CancelToken? cancelToken,
+  }) async {
+    return const Right(unit);
+  }
 }

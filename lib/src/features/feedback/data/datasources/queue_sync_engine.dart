@@ -1,7 +1,10 @@
 import 'dart:convert';
 import 'dart:math';
+import 'dart:typed_data';
 import '../../../../config/feedback_os_options.dart';
 import '../../../../core/errors/exceptions.dart';
+import '../../../../core/errors/failures.dart';
+import '../../../uploads/domain/repositories/upload_repository.dart';
 import '../../domain/entities/queued_feedback.dart';
 import '../models/feedback_submission_model.dart';
 import 'feedback_remote_data_source.dart';
@@ -15,6 +18,7 @@ class QueueSyncEngine {
   final String _appScope;
   final Future<String?> Function() _getActiveUserId;
   final Future<void> Function(String?) _setActiveUserId;
+  final UploadRepository? _uploadRepository;
   final Random _random;
 
   bool _isSyncing = false;
@@ -29,6 +33,7 @@ class QueueSyncEngine {
     required String appScope,
     required Future<String?> Function() getActiveUserId,
     required Future<void> Function(String?) setActiveUserId,
+    UploadRepository? uploadRepository,
     Random? random,
   })  : _store = store,
         _remoteDataSource = remoteDataSource,
@@ -36,6 +41,7 @@ class QueueSyncEngine {
         _appScope = appScope,
         _getActiveUserId = getActiveUserId,
         _setActiveUserId = setActiveUserId,
+        _uploadRepository = uploadRepository,
         _random = random ?? Random();
 
   /// Flushes all due items from the queue.
@@ -81,10 +87,90 @@ class QueueSyncEngine {
           }
         }
 
-        // 4. Submit feedback payload
+        // 4. Submit feedback payload (including offline attachment re-reservations)
         try {
           final payloadMap =
-              jsonDecode(item.payloadJson) as Map<String, dynamic>;
+              Map<String, dynamic>.from(jsonDecode(item.payloadJson) as Map);
+
+          final pendingAttachments =
+              (payloadMap['pending_attachments'] as List<dynamic>?)
+                  ?.map((e) => Map<String, dynamic>.from(e as Map))
+                  .toList();
+
+          if (pendingAttachments != null &&
+              pendingAttachments.isNotEmpty &&
+              _uploadRepository != null) {
+            final uploadIds = List<String>.from(
+              (payloadMap['screenshot_upload_ids'] as List<dynamic>?)
+                      ?.map((e) => e.toString()) ??
+                  const [],
+            );
+
+            bool uploadErrorOccurred = false;
+
+            for (final attMap in pendingAttachments) {
+              final contentType = attMap['content_type'] as String;
+              final bytesBase64 = attMap['bytes_base64'] as String?;
+              final bytes = bytesBase64 != null
+                  ? base64Decode(bytesBase64)
+                  : Uint8List(0);
+
+              // 1. Reserve fresh upload URL (handles expired reservations automatically)
+              final reserveResult = await _uploadRepository.reserveUpload(
+                contentType: contentType,
+                byteSize: bytes.lengthInBytes,
+              );
+
+              final uploadId = await reserveResult.fold(
+                (failure) async {
+                  if (failure is ValidationFailure ||
+                      failure is UploadInvalidFailure ||
+                      failure is PayloadTooLargeFailure) {
+                    await _store.markPermanentlyFailed(
+                      item.clientSubmissionId,
+                      errorCode: failure.code ?? 'upload_invalid',
+                      errorMessage: failure.message,
+                    );
+                    uploadErrorOccurred = true;
+                    return null;
+                  }
+                  throw FeedbackOsNetworkException(
+                    failure.message,
+                    statusCode: failure.statusCode,
+                  );
+                },
+                (reservation) async {
+                  // 2. Transmit raw bytes directly to storage bucket with returned headers
+                  final uploadResult = await _uploadRepository.uploadBinary(
+                    reservation: reservation,
+                    bytes: bytes,
+                  );
+                  return uploadResult.fold(
+                    (failure) {
+                      throw FeedbackOsNetworkException(
+                        failure.message,
+                        statusCode: failure.statusCode,
+                      );
+                    },
+                    (_) => reservation.uploadId,
+                  );
+                },
+              );
+
+              if (uploadErrorOccurred) break;
+              if (uploadId != null) {
+                uploadIds.add(uploadId);
+              }
+            }
+
+            if (uploadErrorOccurred) {
+              continue;
+            }
+
+            payloadMap['screenshot_upload_ids'] = uploadIds;
+            payloadMap.remove('pending_attachments');
+          }
+
           final model = FeedbackSubmissionModel.fromJson(payloadMap);
 
           await _remoteDataSource.submitFeedback(model);

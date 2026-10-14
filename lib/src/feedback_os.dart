@@ -191,6 +191,7 @@ class FeedbackOS {
       appScope: sanitizedKey,
       getActiveUserId: () async => _activeExternalUserId,
       setActiveUserId: (id) async => _activeExternalUserId = id,
+      uploadRepository: _uploadRepository,
     );
 
     _isInitialized = true;
@@ -353,10 +354,21 @@ class FeedbackOS {
 
     // 1. Persist before send
     final submissionModel = FeedbackSubmissionModel.fromEntity(submission);
+    final payloadMap = submissionModel.toJson();
+    if (attachments.isNotEmpty) {
+      payloadMap['pending_attachments'] = attachments
+          .map((a) => {
+                'file_name': a.fileName,
+                'content_type': a.contentType,
+                'bytes_base64': base64Encode(a.bytes),
+                if (a.localFilePath != null) 'local_file_path': a.localFilePath,
+              })
+          .toList();
+    }
     final now = DateTime.now().toUtc();
     final queuedItem = QueuedFeedback(
       clientSubmissionId: submissionId,
-      payloadJson: jsonEncode(submissionModel.toJson()),
+      payloadJson: jsonEncode(payloadMap),
       appScope: _publishableKey!,
       externalUserId: _activeExternalUserId,
       createdAt: now,
