@@ -100,6 +100,21 @@ void main() {
       expect(serialized['old_status'], 'open');
       expect(serialized['new_status'], 'in_progress');
     });
+
+    test('correctly parses backend event format with kind and to_status without id', () {
+      final json = {
+        'kind': 'status_changed',
+        'to_status': 'planned',
+        'created_at': '2026-10-25T10:00:00.000Z',
+      };
+
+      final model = ThreadEventModel.fromJson(json);
+
+      expect(model.id, '');
+      expect(model.type, 'status_changed');
+      expect(model.newStatus, 'planned');
+      expect(model.oldStatus, isNull);
+    });
   });
 
   group('ThreadDetailModel', () {

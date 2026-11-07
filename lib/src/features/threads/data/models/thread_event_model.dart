@@ -11,12 +11,16 @@ class ThreadEventModel extends ThreadEvent {
 
   factory ThreadEventModel.fromJson(Map<String, dynamic> json) {
     return ThreadEventModel(
-      id: json['id'] as String,
-      type: json['type'] as String,
-      oldStatus: json['old_status'] as String?,
-      newStatus: json['new_status'] as String?,
+      id: (json['id'] as String?) ?? '',
+      type: (json['type'] as String?) ??
+          (json['kind'] as String?) ??
+          'status_changed',
+      oldStatus:
+          (json['old_status'] as String?) ?? (json['from_status'] as String?),
+      newStatus:
+          (json['new_status'] as String?) ?? (json['to_status'] as String?),
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'] as String)
+          ? DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now()
           : DateTime.now(),
     );
   }

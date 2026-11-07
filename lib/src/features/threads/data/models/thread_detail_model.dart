@@ -16,25 +16,33 @@ class ThreadDetailModel extends ThreadDetail {
   });
 
   factory ThreadDetailModel.fromJson(Map<String, dynamic> json) {
-    final rawReplies = json['replies'] as List<dynamic>? ?? const [];
+    final source = (json['data'] is Map<String, dynamic>)
+        ? json['data'] as Map<String, dynamic>
+        : json;
+
+    final rawReplies = source['replies'] as List<dynamic>? ?? const [];
     final replies = rawReplies
-        .map((r) => ThreadReplyModel.fromJson(r as Map<String, dynamic>))
+        .whereType<Map>()
+        .map((r) =>
+            ThreadReplyModel.fromJson(Map<String, dynamic>.from(r)))
         .toList();
 
-    final rawEvents = json['events'] as List<dynamic>? ?? const [];
+    final rawEvents = source['events'] as List<dynamic>? ?? const [];
     final events = rawEvents
-        .map((e) => ThreadEventModel.fromJson(e as Map<String, dynamic>))
+        .whereType<Map>()
+        .map((e) =>
+            ThreadEventModel.fromJson(Map<String, dynamic>.from(e)))
         .toList();
 
     return ThreadDetailModel(
-      id: json['id'] as String,
-      title: json['title'] as String,
-      description: (json['description'] as String?) ?? '',
-      type: (json['type'] as String?) ?? 'bug',
-      category: json['category'] as String?,
-      status: (json['status'] as String?) ?? 'open',
-      createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'] as String)
+      id: (source['id'] as String?) ?? '',
+      title: (source['title'] as String?) ?? '',
+      description: (source['description'] as String?) ?? '',
+      type: (source['type'] as String?) ?? 'bug',
+      category: source['category'] as String?,
+      status: (source['status'] as String?) ?? 'open',
+      createdAt: source['created_at'] != null
+          ? DateTime.tryParse(source['created_at'].toString()) ?? DateTime.now()
           : DateTime.now(),
       replies: replies,
       events: events,

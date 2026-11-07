@@ -14,17 +14,17 @@ class MyFeedbackItemModel extends MyFeedbackItem {
 
   factory MyFeedbackItemModel.fromJson(Map<String, dynamic> json) {
     return MyFeedbackItemModel(
-      id: json['id'] as String,
-      title: json['title'] as String,
-      type: json['type'] as String,
+      id: (json['id'] as String?) ?? '',
+      title: (json['title'] as String?) ?? '',
+      type: (json['type'] as String?) ?? 'bug',
       category: json['category'] as String?,
-      status: json['status'] as String,
+      status: (json['status'] as String?) ?? 'open',
       hasUnread: (json['has_unread'] as bool?) ?? false,
       lastActivityAt: json['last_activity_at'] != null
-          ? DateTime.parse(json['last_activity_at'] as String)
+          ? DateTime.tryParse(json['last_activity_at'].toString())
           : null,
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'] as String)
+          ? DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now()
           : DateTime.now(),
     );
   }
