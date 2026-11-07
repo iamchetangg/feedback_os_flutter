@@ -7,6 +7,7 @@ library feedback_os_flutter;
 // Core public facade & options
 export 'src/feedback_os.dart' show FeedbackOS;
 export 'src/config/feedback_os_options.dart' show FeedbackOSOptions;
+export 'core/theme/theme.dart' show FeedbackOSTheme, FeedbackOSThemeProvider;
 
 // Configuration & Ping Entities
 export 'src/features/feedback/domain/entities/sdk_config_entity.dart'

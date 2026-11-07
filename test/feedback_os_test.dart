@@ -33,7 +33,7 @@ void main() {
   group('FeedbackOS Initialization', () {
     test('throws FeedbackOsValidationException when key is empty', () async {
       expect(
-        () => FeedbackOS.instance.initialize(publishableKey: ''),
+        () => FeedbackOS.instance.initializeTest(publishableKey: ''),
         throwsA(isA<FeedbackOsValidationException>()),
       );
     });
@@ -41,14 +41,15 @@ void main() {
     test('throws FeedbackOsValidationException when key has invalid prefix',
         () async {
       expect(
-        () => FeedbackOS.instance.initialize(publishableKey: 'secret_key_123'),
+        () => FeedbackOS.instance
+            .initializeTest(publishableKey: 'secret_key_123'),
         throwsA(isA<FeedbackOsValidationException>()),
       );
     });
 
     test('initializes successfully with valid key without requiring network',
         () async {
-      await FeedbackOS.instance.initialize(
+      await FeedbackOS.instance.initializeTest(
         publishableKey: testKey,
         deviceIdStore: inMemoryDeviceStore,
         submissionStore: inMemorySubmissionStore,
@@ -63,7 +64,7 @@ void main() {
 
     test('calling initialize repeatedly with identical key is idempotent',
         () async {
-      await FeedbackOS.instance.initialize(
+      await FeedbackOS.instance.initializeTest(
         publishableKey: testKey,
         deviceIdStore: inMemoryDeviceStore,
         submissionStore: inMemorySubmissionStore,
@@ -72,7 +73,7 @@ void main() {
       );
 
       // Second call with same key should succeed without throwing
-      await FeedbackOS.instance.initialize(
+      await FeedbackOS.instance.initializeTest(
         publishableKey: testKey,
         deviceIdStore: inMemoryDeviceStore,
         submissionStore: inMemorySubmissionStore,
@@ -85,7 +86,7 @@ void main() {
 
     test('calling initialize with different key throws without reset()',
         () async {
-      await FeedbackOS.instance.initialize(
+      await FeedbackOS.instance.initializeTest(
         publishableKey: testKey,
         deviceIdStore: inMemoryDeviceStore,
         submissionStore: inMemorySubmissionStore,
@@ -94,7 +95,7 @@ void main() {
       );
 
       expect(
-        () => FeedbackOS.instance.initialize(
+        () => FeedbackOS.instance.initializeTest(
           publishableKey: 'fos_pk_different_project_456',
           deviceIdStore: inMemoryDeviceStore,
           submissionStore: inMemorySubmissionStore,
@@ -120,7 +121,7 @@ void main() {
 
   group('FeedbackOS Operations', () {
     setUp(() async {
-      await FeedbackOS.instance.initialize(
+      await FeedbackOS.instance.initializeTest(
         publishableKey: testKey,
         deviceIdStore: inMemoryDeviceStore,
         submissionStore: inMemorySubmissionStore,
@@ -350,7 +351,7 @@ void main() {
 
     test('enforces queue maxOfflineQueueSize capacity limit', () async {
       await FeedbackOS.instance.reset();
-      await FeedbackOS.instance.initialize(
+      await FeedbackOS.instance.initializeTest(
         publishableKey: testKey,
         deviceIdStore: inMemoryDeviceStore,
         submissionStore: inMemorySubmissionStore,
@@ -391,7 +392,7 @@ void main() {
     });
 
     test('uploadScreenshot reserves and transmits binary data', () async {
-      await FeedbackOS.instance.initialize(
+      await FeedbackOS.instance.initializeTest(
         publishableKey: testKey,
         deviceIdStore: inMemoryDeviceStore,
         submissionStore: inMemorySubmissionStore,
@@ -431,7 +432,7 @@ void main() {
       );
 
       await FeedbackOS.instance.reset();
-      await FeedbackOS.instance.initialize(
+      await FeedbackOS.instance.initializeTest(
         publishableKey: testKey,
         deviceIdStore: inMemoryDeviceStore,
         submissionStore: inMemorySubmissionStore,
@@ -485,7 +486,7 @@ void main() {
         ),
       );
 
-      await FeedbackOS.instance.initialize(
+      await FeedbackOS.instance.initializeTest(
         publishableKey: testKey,
         deviceIdStore: inMemoryDeviceStore,
         submissionStore: inMemorySubmissionStore,
@@ -559,7 +560,7 @@ void main() {
         ),
       );
 
-      await FeedbackOS.instance.initialize(
+      await FeedbackOS.instance.initializeTest(
         publishableKey: testKey,
         deviceIdStore: inMemoryDeviceStore,
         submissionStore: inMemorySubmissionStore,
@@ -649,7 +650,7 @@ void main() {
 
   group('FeedbackOS Threads Facade Operations', () {
     setUp(() async {
-      await FeedbackOS.instance.initialize(
+      await FeedbackOS.instance.initializeTest(
         publishableKey: testKey,
         deviceIdStore: inMemoryDeviceStore,
         submissionStore: inMemorySubmissionStore,

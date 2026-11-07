@@ -1,9 +1,10 @@
 import 'package:equatable/equatable.dart';
+import '../../core/theme/theme.dart';
+import '../core/network/api_endpoints.dart';
 
 /// Configuration options for initializing the FeedbackOS SDK.
 class FeedbackOSOptions extends Equatable {
   /// Base URL of the FeedbackOS API backend.
-  /// Defaults to production: `https://api.feedbackos.dev`.
   final Uri baseUrl;
 
   /// HTTP connect timeout. Defaults to 15 seconds.
@@ -24,14 +25,8 @@ class FeedbackOSOptions extends Equatable {
   /// Defaults to 7 days.
   final Duration queueItemTtl;
 
-  static final Uri defaultProductionBaseUrl =
-      Uri.parse('https://api.feedbackos.dev');
-
-  static final Uri defaultStagingBaseUrl = Uri.parse(
-    'https://feedbackos-api-staging.chetangaddam71.workers.dev',
-  );
-
-  static final Uri defaultLocalBaseUrl = Uri.parse('http://localhost:8787');
+  /// User-defined colors and theming for the SDK UI components.
+  final FeedbackOSTheme theme;
 
   FeedbackOSOptions({
     Uri? baseUrl,
@@ -40,7 +35,8 @@ class FeedbackOSOptions extends Equatable {
     this.debugLogging = false,
     this.maxOfflineQueueSize = 500,
     this.queueItemTtl = const Duration(days: 7),
-  }) : baseUrl = baseUrl ?? defaultProductionBaseUrl;
+    this.theme = const FeedbackOSTheme(),
+  }) : baseUrl = baseUrl ?? ApiEndpoints.productionBaseUrl;
 
   /// Factory constructor for staging environment.
   /// Uses the verified staging Cloudflare Worker endpoint.
@@ -48,12 +44,14 @@ class FeedbackOSOptions extends Equatable {
     Duration connectTimeout = const Duration(seconds: 15),
     Duration receiveTimeout = const Duration(seconds: 15),
     bool debugLogging = false,
+    FeedbackOSTheme theme = const FeedbackOSTheme(),
   }) {
     return FeedbackOSOptions(
-      baseUrl: defaultStagingBaseUrl,
+      baseUrl: ApiEndpoints.stagingBaseUrl,
       connectTimeout: connectTimeout,
       receiveTimeout: receiveTimeout,
       debugLogging: debugLogging,
+      theme: theme,
     );
   }
 
@@ -62,12 +60,35 @@ class FeedbackOSOptions extends Equatable {
     Duration connectTimeout = const Duration(seconds: 15),
     Duration receiveTimeout = const Duration(seconds: 15),
     bool debugLogging = true,
+    FeedbackOSTheme theme = const FeedbackOSTheme(),
   }) {
     return FeedbackOSOptions(
-      baseUrl: defaultLocalBaseUrl,
+      baseUrl: ApiEndpoints.localBaseUrl,
       connectTimeout: connectTimeout,
       receiveTimeout: receiveTimeout,
       debugLogging: debugLogging,
+      theme: theme,
+    );
+  }
+
+  /// Creates a copy of this configuration with the given fields replaced.
+  FeedbackOSOptions copyWith({
+    Uri? baseUrl,
+    Duration? connectTimeout,
+    Duration? receiveTimeout,
+    bool? debugLogging,
+    int? maxOfflineQueueSize,
+    Duration? queueItemTtl,
+    FeedbackOSTheme? theme,
+  }) {
+    return FeedbackOSOptions(
+      baseUrl: baseUrl ?? this.baseUrl,
+      connectTimeout: connectTimeout ?? this.connectTimeout,
+      receiveTimeout: receiveTimeout ?? this.receiveTimeout,
+      debugLogging: debugLogging ?? this.debugLogging,
+      maxOfflineQueueSize: maxOfflineQueueSize ?? this.maxOfflineQueueSize,
+      queueItemTtl: queueItemTtl ?? this.queueItemTtl,
+      theme: theme ?? this.theme,
     );
   }
 
@@ -79,5 +100,6 @@ class FeedbackOSOptions extends Equatable {
         debugLogging,
         maxOfflineQueueSize,
         queueItemTtl,
+        theme,
       ];
 }

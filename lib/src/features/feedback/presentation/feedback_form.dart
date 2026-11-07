@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../core/theme/theme.dart';
 import '../../../../core/theme/styles.dart';
 import '../../uploads/domain/entities/screenshot_attachment.dart';
 import '../domain/entities/feedback_submit_result.dart';
@@ -12,19 +13,23 @@ import '../state/feedback_state.dart';
 class FeedbackFormDialog extends StatelessWidget {
   final VoidCallback? onDismiss;
   final Future<ScreenshotAttachment?> Function()? onPickAttachment;
+  final bool shouldShowCategory;
 
   const FeedbackFormDialog({
     super.key,
     this.onDismiss,
     this.onPickAttachment,
+    this.shouldShowCategory = true,
   });
 
   @override
   Widget build(BuildContext context) {
+    final theme = FeedbackOSTheme.of(context);
+
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      backgroundColor: Colors.white,
+      backgroundColor: theme.onPrimaryColor,
       clipBehavior: Clip.antiAlias,
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 480),
@@ -57,7 +62,7 @@ class FeedbackFormDialog extends StatelessWidget {
                     },
                   ),
                   const SizedBox(height: 20),
-                  const _TypeSelector(),
+                  if (shouldShowCategory) const _TypeSelector(),
                   const SizedBox(height: 16),
                   if (state.availableCategories.isNotEmpty) ...[
                     const _CategoryDropdown(),
@@ -74,7 +79,7 @@ class FeedbackFormDialog extends StatelessWidget {
                     const SizedBox(height: 12),
                     Text(
                       state.errorMessage!,
-                      style: AppStyles.error,
+                      style: AppStyles.error.copyWith(color: theme.errorColor),
                       textAlign: TextAlign.center,
                     ),
                   ],
@@ -97,17 +102,18 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = FeedbackOSTheme.of(context);
     return Row(
       children: [
-        const Expanded(
+        Expanded(
           child: Text(
             'Send Feedback',
-            style: AppStyles.titleLarge,
+            style: AppStyles.titleLarge.copyWith(color: theme.titleColor),
           ),
         ),
         IconButton(
           key: const Key('feedback_close_button'),
-          icon: const Icon(Icons.close, color: Color(0xFF6B7280)),
+          icon: Icon(Icons.close, color: theme.mutedTextColor),
           onPressed: onClose,
           splashRadius: 20,
         ),
@@ -121,11 +127,12 @@ class _TypeSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = FeedbackOSTheme.of(context);
     final currentType = context.select((FeedbackBloc b) => b.state.type);
 
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFF3F4F6),
+        color: theme.secondaryBackgroundColor,
         borderRadius: BorderRadius.circular(10),
       ),
       padding: const EdgeInsets.all(4),
@@ -180,6 +187,7 @@ class _TypeButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = FeedbackOSTheme.of(context);
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
@@ -187,8 +195,12 @@ class _TypeButton extends StatelessWidget {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.white : Colors.transparent,
+          color:
+              isSelected ? theme.secondaryBackgroundColor : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
+          border: isSelected
+              ? Border.all(color: theme.primaryColor)
+              : Border.all(color: Colors.transparent),
           boxShadow: isSelected
               ? [
                   BoxShadow(
@@ -205,14 +217,14 @@ class _TypeButton extends StatelessWidget {
             Icon(
               icon,
               size: 18,
-              color: isSelected
-                  ? const Color(0xFF111827)
-                  : const Color(0xFF6B7280),
+              color: isSelected ? theme.titleColor : theme.mutedTextColor,
             ),
             const SizedBox(width: 6),
             Text(
               title,
-              style: isSelected ? AppStyles.titleSmall : AppStyles.labelMedium,
+              style: isSelected
+                  ? AppStyles.titleSmall.copyWith(color: theme.titleColor)
+                  : AppStyles.labelMedium.copyWith(color: theme.mutedTextColor),
             ),
           ],
         ),
@@ -226,27 +238,43 @@ class _CategoryDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = FeedbackOSTheme.of(context);
     final state = context.select((FeedbackBloc b) => b.state);
 
     return DropdownButtonFormField<String>(
       key: const Key('feedback_category_dropdown'),
       initialValue: state.category,
+      dropdownColor: theme.surfaceColor,
+      style: AppStyles.bodyMedium.copyWith(color: theme.textColor),
       decoration: InputDecoration(
         labelText: 'Category (Optional)',
-        labelStyle: AppStyles.labelMedium,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        labelStyle: AppStyles.labelMedium.copyWith(color: theme.mutedTextColor),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: theme.borderColor),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: theme.borderColor),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: theme.primaryColor),
+        ),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       ),
       items: [
-        const DropdownMenuItem<String>(
+        DropdownMenuItem<String>(
           value: null,
-          child: Text('None', style: AppStyles.bodyMedium),
+          child: Text('None',
+              style: AppStyles.bodyMedium.copyWith(color: theme.textColor)),
         ),
         ...state.availableCategories.map(
           (cat) => DropdownMenuItem(
             value: cat,
-            child: Text(cat, style: AppStyles.bodyMedium),
+            child: Text(cat,
+                style: AppStyles.bodyMedium.copyWith(color: theme.textColor)),
           ),
         ),
       ],
@@ -262,6 +290,7 @@ class _TitleField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = FeedbackOSTheme.of(context);
     final type = context.select((FeedbackBloc b) => b.state.type);
     final hint = type == FeedbackType.bug
         ? 'What went wrong?'
@@ -269,13 +298,24 @@ class _TitleField extends StatelessWidget {
 
     return TextFormField(
       key: const Key('feedback_title_field'),
-      style: AppStyles.bodyLarge,
+      style: AppStyles.bodyLarge.copyWith(color: theme.textColor),
       decoration: InputDecoration(
         labelText: 'Title *',
         hintText: hint,
-        labelStyle: AppStyles.labelMedium,
-        hintStyle: AppStyles.bodySmall,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        labelStyle: AppStyles.labelMedium.copyWith(color: theme.mutedTextColor),
+        hintStyle: AppStyles.bodySmall.copyWith(color: theme.placeholderColor),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: theme.borderColor),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: theme.borderColor),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: theme.primaryColor),
+        ),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       ),
@@ -291,16 +331,28 @@ class _DescriptionField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = FeedbackOSTheme.of(context);
     return TextFormField(
       key: const Key('feedback_description_field'),
-      style: AppStyles.bodyLarge,
+      style: AppStyles.bodyLarge.copyWith(color: theme.textColor),
       maxLines: 4,
       decoration: InputDecoration(
         labelText: 'Description (Optional)',
         hintText: 'Add details, steps to reproduce, or suggestions...',
-        labelStyle: AppStyles.labelMedium,
-        hintStyle: AppStyles.bodySmall,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        labelStyle: AppStyles.labelMedium.copyWith(color: theme.mutedTextColor),
+        hintStyle: AppStyles.bodySmall.copyWith(color: theme.placeholderColor),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: theme.borderColor),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: theme.borderColor),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: theme.primaryColor),
+        ),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       ),
@@ -316,6 +368,7 @@ class _SubmitButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = FeedbackOSTheme.of(context);
     final canSubmit = context.select((FeedbackBloc b) => b.state.canSubmit);
     final isSubmitting =
         context.select((FeedbackBloc b) => b.state.isSubmitting);
@@ -323,8 +376,8 @@ class _SubmitButton extends StatelessWidget {
     return ElevatedButton(
       key: const Key('feedback_submit_button'),
       style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF2563EB),
-        disabledBackgroundColor: const Color(0xFF93C5FD),
+        backgroundColor: theme.primaryColor,
+        disabledBackgroundColor: theme.primaryColor.withAlpha(100),
         padding: const EdgeInsets.symmetric(vertical: 14),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         elevation: 0,
@@ -335,15 +388,18 @@ class _SubmitButton extends StatelessWidget {
             }
           : null,
       child: isSubmitting
-          ? const SizedBox(
+          ? SizedBox(
               height: 20,
               width: 20,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: Colors.white,
+                color: theme.primaryColor,
               ),
             )
-          : const Text('Send Feedback', style: AppStyles.labelLarge),
+          : Text(
+              'Send Feedback',
+              style: AppStyles.labelLarge.copyWith(color: theme.surfaceColor),
+            ),
     );
   }
 }
@@ -356,6 +412,7 @@ class _SuccessView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = FeedbackOSTheme.of(context);
     final isQueued = result?.status == FeedbackSubmitStatus.queued;
 
     return Padding(
@@ -366,21 +423,21 @@ class _SuccessView extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color:
-                  isQueued ? const Color(0xFFFEF3C7) : const Color(0xFFDCFCE7),
+              color: isQueued
+                  ? theme.warningBackgroundColor
+                  : theme.successBackgroundColor,
               shape: BoxShape.circle,
             ),
             child: Icon(
               isQueued ? Icons.schedule_outlined : Icons.check_circle_outline,
               size: 48,
-              color:
-                  isQueued ? const Color(0xFFD97706) : const Color(0xFF16A34A),
+              color: isQueued ? theme.warningColor : theme.successColor,
             ),
           ),
           const SizedBox(height: 16),
           Text(
             isQueued ? 'Saved for Later' : 'Thank You!',
-            style: AppStyles.titleLarge,
+            style: AppStyles.titleLarge.copyWith(color: theme.titleColor),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
@@ -388,7 +445,8 @@ class _SuccessView extends StatelessWidget {
             isQueued
                 ? 'Your feedback is saved offline and will automatically be sent once connectivity returns.'
                 : 'Your feedback has been received and helps us make the app better.',
-            style: AppStyles.bodyMedium,
+            style:
+                AppStyles.bodyMedium.copyWith(color: theme.secondaryTextColor),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
@@ -397,14 +455,18 @@ class _SuccessView extends StatelessWidget {
             child: ElevatedButton(
               key: const Key('feedback_success_done_button'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF111827),
+                backgroundColor: theme.titleColor,
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
               onPressed: onClose,
-              child: const Text('Done', style: AppStyles.labelLarge),
+              child: Text(
+                'Done',
+                style:
+                    AppStyles.labelLarge.copyWith(color: theme.onPrimaryColor),
+              ),
             ),
           ),
         ],
@@ -420,6 +482,7 @@ class _ScreenshotAttachmentsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = FeedbackOSTheme.of(context);
     final attachments = context.select((FeedbackBloc b) => b.state.attachments);
     final canAdd = context.select((FeedbackBloc b) => b.state.canAddAttachment);
 
@@ -433,8 +496,16 @@ class _ScreenshotAttachmentsSection extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text('Screenshots (optional)', style: AppStyles.labelMedium),
-            Text('${attachments.length}/3', style: AppStyles.bodySmall),
+            Text(
+              'Screenshots (optional)',
+              style: AppStyles.labelMedium
+                  .copyWith(color: theme.secondaryTextColor),
+            ),
+            Text(
+              '${attachments.length}/3',
+              style:
+                  AppStyles.bodySmall.copyWith(color: theme.placeholderColor),
+            ),
           ],
         ),
         const SizedBox(height: 8),
@@ -480,6 +551,7 @@ class _AttachmentThumbnail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = FeedbackOSTheme.of(context);
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -487,23 +559,23 @@ class _AttachmentThumbnail extends StatelessWidget {
           width: 64,
           height: 64,
           decoration: BoxDecoration(
-            color: const Color(0xFFF3F4F6),
+            color: theme.secondaryBackgroundColor,
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: const Color(0xFFE5E7EB)),
+            border: Border.all(color: theme.borderColor),
           ),
           clipBehavior: Clip.antiAlias,
           child: attachment.bytes.isNotEmpty
               ? Image.memory(
                   attachment.bytes,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const Icon(
+                  errorBuilder: (_, __, ___) => Icon(
                     Icons.image,
-                    color: Color(0xFF9CA3AF),
+                    color: theme.placeholderColor,
                   ),
                 )
-              : const Icon(
+              : Icon(
                   Icons.image,
-                  color: Color(0xFF9CA3AF),
+                  color: theme.placeholderColor,
                 ),
         ),
         Positioned(
@@ -518,14 +590,14 @@ class _AttachmentThumbnail extends StatelessWidget {
             },
             child: Container(
               padding: const EdgeInsets.all(2),
-              decoration: const BoxDecoration(
-                color: Color(0xFF1F2937),
+              decoration: BoxDecoration(
+                color: theme.titleColor,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.close,
                 size: 12,
-                color: Colors.white,
+                color: theme.onPrimaryColor,
               ),
             ),
           ),
@@ -542,6 +614,7 @@ class _AddAttachmentButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = FeedbackOSTheme.of(context);
     return GestureDetector(
       key: const Key('feedback_add_attachment_button'),
       onTap: onTap,
@@ -549,24 +622,24 @@ class _AddAttachmentButton extends StatelessWidget {
         width: 64,
         height: 64,
         decoration: BoxDecoration(
-          color: const Color(0xFFF9FAFB),
+          color: theme.backgroundColor,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: const Color(0xFFD1D5DB),
+            color: theme.borderMutedColor,
           ),
         ),
-        child: const Column(
+        child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               Icons.add_photo_alternate_outlined,
               size: 20,
-              color: Color(0xFF6B7280),
+              color: theme.mutedTextColor,
             ),
-            SizedBox(height: 2),
+            const SizedBox(height: 2),
             Text(
               'Add',
-              style: AppStyles.labelSmall,
+              style: AppStyles.labelSmall.copyWith(color: theme.mutedTextColor),
             ),
           ],
         ),

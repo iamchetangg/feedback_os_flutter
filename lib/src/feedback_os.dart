@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
 import 'config/feedback_os_options.dart';
+import '../core/theme/theme.dart';
 import 'core/errors/exceptions.dart';
 import 'core/errors/failures.dart';
 import 'core/network/feedback_os_dio_client.dart';
@@ -73,6 +74,53 @@ class FeedbackOS {
   bool _isInitialized = false;
   String? _publishableKey;
   FeedbackOSOptions? _options;
+
+  /// Returns the current configuration options if initialized.
+  FeedbackOSOptions? get options => _options;
+
+  /// Returns the effective runtime theme.
+  FeedbackOSTheme get theme => _options?.theme ?? FeedbackOSTheme.current;
+
+  /// Sets or updates the active runtime theme on demand.
+  void setTheme(FeedbackOSTheme newTheme) {
+    if (_options != null) {
+      _options = _options!.copyWith(theme: newTheme);
+    }
+    FeedbackOSTheme.current = newTheme;
+  }
+
+  /// Switches the SDK theme on demand.
+  ///
+  /// - Pass [theme] to explicitly set a specific [FeedbackOSTheme].
+  /// - Pass [isDark] (`true` or `false`) to switch between [darkTheme] and [lightTheme].
+  ///   [darkTheme] defaults to [FeedbackOSTheme.dark()] if not provided.
+  ///   [lightTheme] defaults to [FeedbackOSTheme.light()] if not provided.
+  /// - If neither [theme] nor [isDark] is provided, toggles the active theme between
+  ///   [lightTheme] and [darkTheme].
+  void switchTheme({
+    FeedbackOSTheme? theme,
+    bool? isDark,
+    FeedbackOSTheme? lightTheme,
+    FeedbackOSTheme? darkTheme,
+  }) {
+    final effectiveLight = lightTheme ?? FeedbackOSTheme.light();
+    final effectiveDark = darkTheme ?? FeedbackOSTheme.dark();
+
+    FeedbackOSTheme nextTheme;
+    if (theme != null) {
+      nextTheme = theme;
+    } else if (isDark != null) {
+      nextTheme = isDark ? effectiveDark : effectiveLight;
+    } else {
+      final currentTheme = this.theme;
+      final isCurrentlyDark =
+          currentTheme == effectiveDark || currentTheme.isDark;
+      nextTheme = isCurrentlyDark ? effectiveLight : effectiveDark;
+    }
+
+    setTheme(nextTheme);
+  }
+
   DeviceIdStore? _deviceIdStore;
   DeviceInfoProvider? _deviceInfoProvider;
   SubmissionStore? _submissionStore;
@@ -165,6 +213,39 @@ class FeedbackOS {
   Future<void> initialize({
     required String publishableKey,
     FeedbackOSOptions? options,
+  }) async {
+    await _initialize(publishableKey: publishableKey, options: options);
+  }
+
+  @visibleForTesting
+  Future<void> initializeTest({
+    required String publishableKey,
+    FeedbackOSOptions? options,
+    DeviceIdStore? deviceIdStore,
+    DeviceInfoProvider? deviceInfoProvider,
+    SubmissionStore? submissionStore,
+    FeedbackOsHttpClient? httpClient,
+    UploadRepository? uploadRepository,
+    BinaryUploader? binaryUploader,
+    BoardRepository? boardRepository,
+    ThreadsRepository? threadsRepository,
+  }) async {
+    await _initialize(
+        publishableKey: publishableKey,
+        options: options,
+        deviceIdStore: deviceIdStore,
+        deviceInfoProvider: deviceInfoProvider,
+        submissionStore: submissionStore,
+        httpClient: httpClient,
+        uploadRepository: uploadRepository,
+        binaryUploader: binaryUploader,
+        boardRepository: boardRepository,
+        threadsRepository: threadsRepository);
+  }
+
+  Future<void> _initialize({
+    required String publishableKey,
+    FeedbackOSOptions? options,
     DeviceIdStore? deviceIdStore,
     DeviceInfoProvider? deviceInfoProvider,
     SubmissionStore? submissionStore,
@@ -202,6 +283,7 @@ class FeedbackOS {
 
     _publishableKey = sanitizedKey;
     _options = options ?? FeedbackOSOptions();
+    FeedbackOSTheme.current = _options!.theme;
     _deviceIdStore = deviceIdStore ?? SecureDeviceIdStore();
     _deviceInfoProvider = deviceInfoProvider ?? DefaultDeviceInfoProvider();
     _submissionStore = submissionStore ?? SqliteSubmissionStore();
@@ -736,6 +818,7 @@ class FeedbackOS {
     List<ScreenshotAttachment> initialAttachments = const [],
     Future<ScreenshotAttachment?> Function()? onPickAttachment,
     FeedbackBloc? customBloc,
+    bool shouldShowCategory = true,
   }) async {
     _ensureInitialized();
 
@@ -768,10 +851,13 @@ class FeedbackOS {
       context: context,
       barrierDismissible: true,
       builder: (dialogContext) {
-        return BlocProvider<FeedbackBloc>.value(
-          value: bloc,
-          child: FeedbackFormDialog(
-            onPickAttachment: onPickAttachment,
+        return FeedbackOSThemeProvider(
+          theme: theme,
+          child: BlocProvider<FeedbackBloc>.value(
+            value: bloc,
+            child: FeedbackFormDialog(
+                onPickAttachment: onPickAttachment,
+                shouldShowCategory: shouldShowCategory),
           ),
         );
       },
@@ -815,6 +901,7 @@ class FeedbackOS {
     _isInitialized = false;
     _publishableKey = null;
     _options = null;
+    FeedbackOSTheme.current = null;
     _deviceIdStore = null;
     _deviceInfoProvider = null;
     _submissionStore = null;

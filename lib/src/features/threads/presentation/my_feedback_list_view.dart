@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../core/theme/theme.dart';
 import '../../../../core/theme/styles.dart';
 import '../domain/entities/my_feedback_item.dart';
 import '../state/threads_bloc.dart';
@@ -19,15 +20,20 @@ class MyFeedbackListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = FeedbackOSTheme.of(context);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+      backgroundColor: theme.backgroundColor,
       appBar: AppBar(
-        title: const Text('My Feedback', style: AppStyles.titleMedium),
-        backgroundColor: Colors.white,
+        title: Text(
+          'My Feedback',
+          style: AppStyles.titleMedium.copyWith(color: theme.titleColor),
+        ),
+        backgroundColor: theme.surfaceColor,
         elevation: 0.5,
         leading: onBack != null
             ? IconButton(
-                icon: const Icon(Icons.arrow_back, color: Color(0xFF374151)),
+                icon: Icon(Icons.arrow_back, color: theme.titleColor),
                 onPressed: onBack,
               )
             : null,
@@ -37,16 +43,21 @@ class MyFeedbackListView extends StatelessWidget {
           if (state.errorMessage != null) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(state.errorMessage!,
-                    style: AppStyles.labelMedium.copyWith(color: Colors.white)),
-                backgroundColor: const Color(0xFFDC2626),
+                content: Text(
+                  state.errorMessage!,
+                  style: AppStyles.labelMedium
+                      .copyWith(color: theme.onPrimaryColor),
+                ),
+                backgroundColor: theme.errorColor,
               ),
             );
           }
         },
         builder: (context, state) {
           if (state.status == ThreadsStatus.loading && state.items.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(
+              child: CircularProgressIndicator(color: theme.primaryColor),
+            );
           }
 
           if (state.status == ThreadsStatus.failure && state.items.isEmpty) {
@@ -54,16 +65,26 @@ class MyFeedbackListView extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.error_outline,
-                      size: 48, color: Color(0xFFDC2626)),
+                  Icon(Icons.error_outline, size: 48, color: theme.errorColor),
                   const SizedBox(height: 12),
-                  Text(state.errorMessage ?? 'Failed to load your feedback',
-                      style: AppStyles.bodyMedium),
+                  Text(
+                    state.errorMessage ?? 'Failed to load your feedback',
+                    style: AppStyles.bodyMedium
+                        .copyWith(color: theme.secondaryTextColor),
+                  ),
                   const SizedBox(height: 16),
                   ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: theme.buttonColor,
+                      foregroundColor: theme.onPrimaryColor,
+                    ),
                     onPressed: () =>
                         context.read<ThreadsBloc>().add(const MyItemsStarted()),
-                    child: const Text('Retry'),
+                    child: Text(
+                      'Retry',
+                      style: AppStyles.labelMedium
+                          .copyWith(color: theme.onPrimaryColor),
+                    ),
                   ),
                 ],
               ),
@@ -71,15 +92,18 @@ class MyFeedbackListView extends StatelessWidget {
           }
 
           if (state.items.isEmpty) {
-            return const Center(
+            return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.inbox_outlined,
-                      size: 56, color: Color(0xFF9CA3AF)),
-                  SizedBox(height: 12),
-                  Text('You have not submitted any feedback yet.',
-                      style: AppStyles.bodyMedium),
+                      size: 56, color: theme.placeholderColor),
+                  const SizedBox(height: 12),
+                  Text(
+                    'You have not submitted any feedback yet.',
+                    style: AppStyles.bodyMedium
+                        .copyWith(color: theme.mutedTextColor),
+                  ),
                 ],
               ),
             );
@@ -100,6 +124,7 @@ class MyFeedbackListView extends StatelessWidget {
   }
 
   Widget _buildItemTile(BuildContext context, MyFeedbackItem item) {
+    final theme = FeedbackOSTheme.of(context);
     final isBug = item.type.toLowerCase() == 'bug';
 
     return InkWell(
@@ -108,12 +133,10 @@ class MyFeedbackListView extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: theme.surfaceColor,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: item.hasUnread
-                ? const Color(0xFF6366F1)
-                : const Color(0xFFE5E7EB),
+            color: item.hasUnread ? theme.primaryColor : theme.borderColor,
             width: item.hasUnread ? 1.5 : 1.0,
           ),
           boxShadow: const [
@@ -130,15 +153,15 @@ class MyFeedbackListView extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color:
-                    isBug ? const Color(0xFFFEE2E2) : const Color(0xFFEEF2FF),
+                color: isBug
+                    ? theme.errorBackgroundColor
+                    : theme.primaryLightColor,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
                 isBug ? Icons.bug_report_outlined : Icons.lightbulb_outline,
                 size: 20,
-                color:
-                    isBug ? const Color(0xFFDC2626) : const Color(0xFF4F46E5),
+                color: isBug ? theme.errorColor : theme.primaryColor,
               ),
             ),
             const SizedBox(width: 12),
@@ -151,35 +174,45 @@ class MyFeedbackListView extends StatelessWidget {
                       Expanded(
                         child: Text(
                           item.title,
-                          style: AppStyles.titleSmall,
+                          style: AppStyles.titleSmall
+                              .copyWith(color: theme.titleColor),
                         ),
                       ),
                       if (item.hasUnread) ...[
                         Container(
                           width: 8,
                           height: 8,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF4F46E5),
+                          decoration: BoxDecoration(
+                            color: theme.primaryColor,
                             shape: BoxShape.circle,
                           ),
                         ),
                         const SizedBox(width: 8),
                       ],
-                      _buildStatusChip(item.status),
+                      _buildStatusChip(context, item.status),
                     ],
                   ),
                   const SizedBox(height: 6),
                   Row(
                     children: [
                       if (item.category != null) ...[
-                        Text(item.category!, style: AppStyles.labelSmall),
+                        Text(
+                          item.category!,
+                          style: AppStyles.labelSmall
+                              .copyWith(color: theme.mutedTextColor),
+                        ),
                         const SizedBox(width: 8),
-                        const Text('•', style: AppStyles.labelSmall),
+                        Text(
+                          '•',
+                          style: AppStyles.labelSmall
+                              .copyWith(color: theme.mutedTextColor),
+                        ),
                         const SizedBox(width: 8),
                       ],
                       Text(
                         '${item.createdAt.year}-${item.createdAt.month.toString().padLeft(2, '0')}-${item.createdAt.day.toString().padLeft(2, '0')}',
-                        style: AppStyles.labelSmall,
+                        style: AppStyles.labelSmall
+                            .copyWith(color: theme.mutedTextColor),
                       ),
                     ],
                   ),
@@ -187,37 +220,17 @@ class MyFeedbackListView extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            const Icon(Icons.chevron_right, size: 20, color: Color(0xFF9CA3AF)),
+            Icon(Icons.chevron_right, size: 20, color: theme.placeholderColor),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildStatusChip(String status) {
-    Color bg;
-    Color fg;
-    switch (status.toLowerCase()) {
-      case 'planned':
-        bg = const Color(0xFFFEF3C7);
-        fg = const Color(0xFFB45309);
-        break;
-      case 'in_progress':
-        bg = const Color(0xFFDBEAFE);
-        fg = const Color(0xFF1D4ED8);
-        break;
-      case 'shipped':
-        bg = const Color(0xFFD1FAE5);
-        fg = const Color(0xFF047857);
-        break;
-      case 'closed':
-        bg = const Color(0xFFF3F4F6);
-        fg = const Color(0xFF6B7280);
-        break;
-      default:
-        bg = const Color(0xFFECFDF5);
-        fg = const Color(0xFF059669);
-    }
+  Widget _buildStatusChip(BuildContext context, String status) {
+    final theme = FeedbackOSTheme.of(context);
+    final bg = theme.statusBackgroundColor(status);
+    final fg = theme.statusForegroundColor(status);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),

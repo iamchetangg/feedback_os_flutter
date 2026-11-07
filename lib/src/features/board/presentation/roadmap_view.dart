@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../core/theme/theme.dart';
 import '../../../../core/theme/styles.dart';
 import '../domain/entities/board_item.dart';
 import '../state/board_bloc.dart';
@@ -14,25 +15,30 @@ class RoadmapView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = FeedbackOSTheme.of(context);
+
     return DefaultTabController(
       length: 3,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF9FAFB),
+        backgroundColor: theme.backgroundColor,
         appBar: AppBar(
-          title: const Text('Product Roadmap', style: AppStyles.titleMedium),
-          backgroundColor: Colors.white,
+          title: Text(
+            'Product Roadmap',
+            style: AppStyles.titleMedium.copyWith(color: theme.titleColor),
+          ),
+          backgroundColor: theme.surfaceColor,
           elevation: 0.5,
           leading: onBack != null
               ? IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Color(0xFF374151)),
+                  icon: Icon(Icons.arrow_back, color: theme.titleColor),
                   onPressed: onBack,
                 )
               : null,
-          bottom: const TabBar(
-            labelColor: Color(0xFF4F46E5),
-            unselectedLabelColor: Color(0xFF6B7280),
-            indicatorColor: Color(0xFF4F46E5),
-            tabs: [
+          bottom: TabBar(
+            labelColor: theme.primaryColor,
+            unselectedLabelColor: theme.mutedTextColor,
+            indicatorColor: theme.primaryColor,
+            tabs: const [
               Tab(text: 'Planned'),
               Tab(text: 'In Progress'),
               Tab(text: 'Shipped'),
@@ -42,7 +48,9 @@ class RoadmapView extends StatelessWidget {
         body: BlocBuilder<BoardBloc, BoardState>(
           builder: (context, state) {
             if (state.status == BoardStatus.loading && state.roadmap == null) {
-              return const Center(child: CircularProgressIndicator());
+              return Center(
+                child: CircularProgressIndicator(color: theme.primaryColor),
+              );
             }
 
             if (state.status == BoardStatus.failure && state.roadmap == null) {
@@ -50,16 +58,27 @@ class RoadmapView extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.error_outline,
-                        size: 48, color: Color(0xFFDC2626)),
+                    Icon(Icons.error_outline,
+                        size: 48, color: theme.errorColor),
                     const SizedBox(height: 12),
-                    Text(state.errorMessage ?? 'Failed to load roadmap',
-                        style: AppStyles.bodyMedium),
+                    Text(
+                      state.errorMessage ?? 'Failed to load roadmap',
+                      style: AppStyles.bodyMedium
+                          .copyWith(color: theme.secondaryTextColor),
+                    ),
                     const SizedBox(height: 16),
                     ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: theme.buttonColor,
+                        foregroundColor: theme.onPrimaryColor,
+                      ),
                       onPressed: () =>
                           context.read<BoardBloc>().add(const RoadmapStarted()),
-                      child: const Text('Retry'),
+                      child: Text(
+                        'Retry',
+                        style: AppStyles.labelMedium
+                            .copyWith(color: theme.onPrimaryColor),
+                      ),
                     ),
                   ],
                 ),
@@ -81,9 +100,14 @@ class RoadmapView extends StatelessWidget {
   }
 
   Widget _buildList(BuildContext context, List<BoardItem> items) {
+    final theme = FeedbackOSTheme.of(context);
+
     if (items.isEmpty) {
-      return const Center(
-        child: Text('No items in this stage.', style: AppStyles.bodyMedium),
+      return Center(
+        child: Text(
+          'No items in this stage.',
+          style: AppStyles.bodyMedium.copyWith(color: theme.mutedTextColor),
+        ),
       );
     }
 
@@ -96,9 +120,9 @@ class RoadmapView extends StatelessWidget {
         return Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: theme.surfaceColor,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFE5E7EB)),
+            border: Border.all(color: theme.borderColor),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -106,14 +130,22 @@ class RoadmapView extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: Text(item.title, style: AppStyles.titleSmall),
+                    child: Text(
+                      item.title,
+                      style: AppStyles.titleSmall
+                          .copyWith(color: theme.titleColor),
+                    ),
                   ),
                   Row(
                     children: [
-                      const Icon(Icons.thumb_up_alt_outlined,
-                          size: 14, color: Color(0xFF6B7280)),
+                      Icon(Icons.thumb_up_alt_outlined,
+                          size: 14, color: theme.mutedTextColor),
                       const SizedBox(width: 4),
-                      Text('${item.voteCount}', style: AppStyles.labelSmall),
+                      Text(
+                        '${item.voteCount}',
+                        style: AppStyles.labelSmall
+                            .copyWith(color: theme.mutedTextColor),
+                      ),
                     ],
                   ),
                 ],
@@ -122,7 +154,8 @@ class RoadmapView extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   item.description,
-                  style: AppStyles.bodySmall,
+                  style: AppStyles.bodySmall
+                      .copyWith(color: theme.secondaryTextColor),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -133,10 +166,14 @@ class RoadmapView extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF3F4F6),
+                    color: theme.secondaryBackgroundColor,
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: Text(item.category!, style: AppStyles.labelSmall),
+                  child: Text(
+                    item.category!,
+                    style: AppStyles.labelSmall
+                        .copyWith(color: theme.secondaryTextColor),
+                  ),
                 ),
               ],
             ],

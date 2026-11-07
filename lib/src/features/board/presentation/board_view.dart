@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../core/theme/theme.dart';
 import '../../../../core/theme/styles.dart';
 import '../domain/entities/board_item.dart';
 import '../state/board_bloc.dart';
@@ -14,15 +15,20 @@ class BoardView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = FeedbackOSTheme.of(context);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+      backgroundColor: theme.backgroundColor,
       appBar: AppBar(
-        title: const Text('Community Board', style: AppStyles.titleMedium),
-        backgroundColor: Colors.white,
+        title: Text(
+          'Community Board',
+          style: AppStyles.titleMedium.copyWith(color: theme.titleColor),
+        ),
+        backgroundColor: theme.surfaceColor,
         elevation: 0.5,
         leading: onBack != null
             ? IconButton(
-                icon: const Icon(Icons.arrow_back, color: Color(0xFF374151)),
+                icon: Icon(Icons.arrow_back, color: theme.titleColor),
                 onPressed: onBack,
               )
             : null,
@@ -32,9 +38,12 @@ class BoardView extends StatelessWidget {
           if (state.errorMessage != null) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(state.errorMessage!,
-                    style: AppStyles.labelMedium.copyWith(color: Colors.white)),
-                backgroundColor: const Color(0xFFDC2626),
+                content: Text(
+                  state.errorMessage!,
+                  style: AppStyles.labelMedium
+                      .copyWith(color: theme.onPrimaryColor),
+                ),
+                backgroundColor: theme.errorColor,
               ),
             );
           }
@@ -52,16 +61,29 @@ class BoardView extends StatelessWidget {
   }
 
   Widget _buildSortBar(BuildContext context, BoardState state) {
+    final theme = FeedbackOSTheme.of(context);
+
     return Container(
-      color: Colors.white,
+      color: theme.surfaceColor,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
-          const Text('Sort by:', style: AppStyles.bodySmall),
+          Text(
+            'Sort by:',
+            style: AppStyles.bodySmall.copyWith(color: theme.mutedTextColor),
+          ),
           const SizedBox(width: 8),
           ChoiceChip(
             label: const Text('Top'),
             selected: state.sort == 'top',
+            selectedColor: theme.primaryLightColor,
+            side: BorderSide(color: theme.borderColor),
+            labelStyle: state.sort == 'top'
+                ? AppStyles.labelSmall.copyWith(
+                    color: theme.primaryColor,
+                    fontWeight: FontWeight.w600,
+                  )
+                : AppStyles.labelSmall.copyWith(color: theme.mutedTextColor),
             onSelected: (selected) {
               if (selected) {
                 context.read<BoardBloc>().add(const BoardSortChanged('top'));
@@ -72,6 +94,14 @@ class BoardView extends StatelessWidget {
           ChoiceChip(
             label: const Text('Newest'),
             selected: state.sort == 'new',
+            selectedColor: theme.primaryLightColor,
+            side: BorderSide(color: theme.borderColor),
+            labelStyle: state.sort == 'new'
+                ? AppStyles.labelSmall.copyWith(
+                    color: theme.primaryColor,
+                    fontWeight: FontWeight.w600,
+                  )
+                : AppStyles.labelSmall.copyWith(color: theme.mutedTextColor),
             onSelected: (selected) {
               if (selected) {
                 context.read<BoardBloc>().add(const BoardSortChanged('new'));
@@ -84,8 +114,12 @@ class BoardView extends StatelessWidget {
   }
 
   Widget _buildContent(BuildContext context, BoardState state) {
+    final theme = FeedbackOSTheme.of(context);
+
     if (state.status == BoardStatus.loading && state.items.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(
+        child: CircularProgressIndicator(color: theme.primaryColor),
+      );
     }
 
     if (state.status == BoardStatus.failure && state.items.isEmpty) {
@@ -93,15 +127,26 @@ class BoardView extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 48, color: Color(0xFFDC2626)),
+            Icon(Icons.error_outline, size: 48, color: theme.errorColor),
             const SizedBox(height: 12),
-            Text(state.errorMessage ?? 'Failed to load community board',
-                style: AppStyles.bodyMedium),
+            Text(
+              state.errorMessage ?? 'Failed to load community board',
+              style: AppStyles.bodyMedium
+                  .copyWith(color: theme.secondaryTextColor),
+            ),
             const SizedBox(height: 16),
             ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.buttonColor,
+                foregroundColor: theme.onPrimaryColor,
+              ),
               onPressed: () =>
                   context.read<BoardBloc>().add(BoardStarted(sort: state.sort)),
-              child: const Text('Retry'),
+              child: Text(
+                'Retry',
+                style:
+                    AppStyles.labelMedium.copyWith(color: theme.onPrimaryColor),
+              ),
             ),
           ],
         ),
@@ -109,8 +154,11 @@ class BoardView extends StatelessWidget {
     }
 
     if (state.items.isEmpty) {
-      return const Center(
-        child: Text('No feature requests yet.', style: AppStyles.bodyMedium),
+      return Center(
+        child: Text(
+          'No feature requests yet.',
+          style: AppStyles.bodyMedium.copyWith(color: theme.mutedTextColor),
+        ),
       );
     }
 
@@ -124,8 +172,12 @@ class BoardView extends StatelessWidget {
             child: TextButton.icon(
               onPressed: () =>
                   context.read<BoardBloc>().add(const BoardNextPageRequested()),
-              icon: const Icon(Icons.expand_more),
-              label: const Text('Load More'),
+              icon: Icon(Icons.expand_more, color: theme.primaryColor),
+              label: Text(
+                'Load More',
+                style:
+                    AppStyles.labelMedium.copyWith(color: theme.primaryColor),
+              ),
             ),
           );
         }
@@ -137,12 +189,14 @@ class BoardView extends StatelessWidget {
   }
 
   Widget _buildItemCard(BuildContext context, BoardItem item) {
+    final theme = FeedbackOSTheme.of(context);
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.surfaceColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        border: Border.all(color: theme.borderColor),
         boxShadow: const [
           BoxShadow(
             color: Color(0x05000000),
@@ -165,17 +219,19 @@ class BoardView extends StatelessWidget {
                     Expanded(
                       child: Text(
                         item.title,
-                        style: AppStyles.titleSmall,
+                        style: AppStyles.titleSmall
+                            .copyWith(color: theme.titleColor),
                       ),
                     ),
-                    _buildStatusChip(item.status),
+                    _buildStatusChip(context, item.status),
                   ],
                 ),
                 if (item.description.isNotEmpty) ...[
                   const SizedBox(height: 6),
                   Text(
                     item.description,
-                    style: AppStyles.bodySmall,
+                    style: AppStyles.bodySmall
+                        .copyWith(color: theme.secondaryTextColor),
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -188,11 +244,14 @@ class BoardView extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF3F4F6),
+                          color: theme.secondaryBackgroundColor,
                           borderRadius: BorderRadius.circular(6),
                         ),
-                        child:
-                            Text(item.category!, style: AppStyles.labelSmall),
+                        child: Text(
+                          item.category!,
+                          style: AppStyles.labelSmall
+                              .copyWith(color: theme.secondaryTextColor),
+                        ),
                       ),
                       const SizedBox(width: 8),
                     ],
@@ -201,13 +260,13 @@ class BoardView extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFEEF2FF),
+                          color: theme.primaryLightColor,
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
                           'You submitted',
                           style: AppStyles.labelSmall
-                              .copyWith(color: const Color(0xFF4F46E5)),
+                              .copyWith(color: theme.primaryColor),
                         ),
                       ),
                   ],
@@ -221,7 +280,9 @@ class BoardView extends StatelessWidget {
   }
 
   Widget _buildVoteButton(BuildContext context, BoardItem item) {
+    final theme = FeedbackOSTheme.of(context);
     final hasVoted = item.hasVoted;
+
     return InkWell(
       onTap: () {
         context.read<BoardBloc>().add(BoardItemVoteToggled(item.id));
@@ -231,10 +292,10 @@ class BoardView extends StatelessWidget {
         width: 48,
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: hasVoted ? const Color(0xFFEEF2FF) : const Color(0xFFF9FAFB),
+          color: hasVoted ? theme.primaryLightColor : theme.backgroundColor,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: hasVoted ? const Color(0xFF6366F1) : const Color(0xFFE5E7EB),
+            color: hasVoted ? theme.primaryColor : theme.borderColor,
           ),
         ),
         child: Column(
@@ -243,16 +304,13 @@ class BoardView extends StatelessWidget {
             Icon(
               Icons.keyboard_arrow_up,
               size: 20,
-              color:
-                  hasVoted ? const Color(0xFF4F46E5) : const Color(0xFF6B7280),
+              color: hasVoted ? theme.primaryColor : theme.mutedTextColor,
             ),
             Text(
               '${item.voteCount}',
               style: AppStyles.labelSmall.copyWith(
                 fontWeight: FontWeight.w700,
-                color: hasVoted
-                    ? const Color(0xFF4F46E5)
-                    : const Color(0xFF374151),
+                color: hasVoted ? theme.primaryColor : theme.titleColor,
               ),
             ),
           ],
@@ -261,26 +319,10 @@ class BoardView extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusChip(String status) {
-    Color bg;
-    Color fg;
-    switch (status.toLowerCase()) {
-      case 'planned':
-        bg = const Color(0xFFFEF3C7);
-        fg = const Color(0xFFB45309);
-        break;
-      case 'in_progress':
-        bg = const Color(0xFFDBEAFE);
-        fg = const Color(0xFF1D4ED8);
-        break;
-      case 'shipped':
-        bg = const Color(0xFFD1FAE5);
-        fg = const Color(0xFF047857);
-        break;
-      default:
-        bg = const Color(0xFFF3F4F6);
-        fg = const Color(0xFF4B5563);
-    }
+  Widget _buildStatusChip(BuildContext context, String status) {
+    final theme = FeedbackOSTheme.of(context);
+    final bg = theme.statusBackgroundColor(status);
+    final fg = theme.statusForegroundColor(status);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
