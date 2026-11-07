@@ -46,6 +46,10 @@ import 'features/board/domain/usecases/get_board_use_case.dart';
 import 'features/board/domain/usecases/get_roadmap_use_case.dart';
 import 'features/board/domain/usecases/unvote_item_use_case.dart';
 import 'features/board/domain/usecases/vote_item_use_case.dart';
+import 'features/board/presentation/board_view.dart';
+import 'features/board/presentation/roadmap_view.dart';
+import 'features/board/state/board_bloc.dart';
+import 'features/board/state/board_event.dart';
 import 'features/threads/data/datasources/threads_remote_data_source.dart';
 import 'features/threads/data/repositories/threads_repository_impl.dart';
 import 'features/threads/domain/entities/my_feedback_item.dart';
@@ -57,8 +61,10 @@ import 'features/threads/domain/usecases/get_thread_detail_use_case.dart';
 import 'features/threads/domain/usecases/get_unread_count_use_case.dart';
 import 'features/threads/domain/usecases/mark_thread_read_use_case.dart';
 import 'features/threads/domain/usecases/send_reply_use_case.dart';
-import 'features/board/state/board_bloc.dart';
+import 'features/threads/presentation/my_feedback_list_view.dart';
+import 'features/threads/presentation/thread_detail_view.dart';
 import 'features/threads/state/threads_bloc.dart';
+import 'features/threads/state/threads_event.dart';
 import 'identity/device_id_store.dart';
 import 'identity/device_info_provider.dart';
 
@@ -861,6 +867,172 @@ class FeedbackOS {
           ),
         );
       },
+    );
+  }
+
+  /// Opens the [RoadmapView] on a new screen.
+  ///
+  /// Safe to call from any valid [BuildContext].
+  /// Adheres to project Golden Rule 6 & 7: Bloc is instantiated outside the UI tree
+  /// and injected cleanly via [BlocProvider.value].
+  Future<void> openRoadmap({
+    required BuildContext context,
+    BoardBloc? customBloc,
+    VoidCallback? onOpenDashboard,
+    VoidCallback? onOpenBoard,
+    VoidCallback? onOpenMyFeedback,
+    VoidCallback? onBack,
+  }) async {
+    _ensureInitialized();
+
+    final bloc = customBloc ?? createBoardBloc();
+    bloc.add(const RoadmapStarted());
+
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (routeContext) {
+          return FeedbackOSThemeProvider(
+            theme: theme,
+            child: BlocProvider<BoardBloc>.value(
+              value: bloc,
+              child: RoadmapView(
+                onBack: onBack ?? () => Navigator.of(routeContext).pop(),
+                onOpenDashboard: onOpenDashboard ??
+                    () => openBoard(context: routeContext),
+                onOpenBoard: onOpenBoard,
+                onOpenMyFeedback: onOpenMyFeedback ??
+                    () => openFeedbackDashboard(context: routeContext),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  /// Opens the [BoardView] on a new screen.
+  ///
+  /// Safe to call from any valid [BuildContext].
+  /// Adheres to project Golden Rule 6 & 7: Bloc is instantiated outside the UI tree
+  /// and injected cleanly via [BlocProvider.value].
+  Future<void> openBoard({
+    required BuildContext context,
+    BoardBloc? customBloc,
+    VoidCallback? onOpenDashboard,
+    VoidCallback? onOpenRoadmap,
+    VoidCallback? onBack,
+  }) async {
+    _ensureInitialized();
+
+    final bloc = customBloc ?? createBoardBloc();
+    bloc.add(const BoardStarted());
+
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (routeContext) {
+          return FeedbackOSThemeProvider(
+            theme: theme,
+            child: BlocProvider<BoardBloc>.value(
+              value: bloc,
+              child: BoardView(
+                onBack: onBack ?? () => Navigator.of(routeContext).pop(),
+                onOpenDashboard: onOpenDashboard ??
+                    () => openFeedbackDashboard(context: routeContext),
+                onOpenRoadmap: onOpenRoadmap ??
+                    () => openRoadmap(context: routeContext),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  /// Opens the [MyFeedbackListView] on a new screen where users can track
+  /// their submitted feedback requests, statuses, and unread replies.
+  ///
+  /// Safe to call from any valid [BuildContext].
+  /// Adheres to project Golden Rule 6 & 7: Bloc is instantiated outside the UI tree
+  /// and injected cleanly via [BlocProvider.value].
+  Future<void> openFeedbackDashboard({
+    required BuildContext context,
+    ThreadsBloc? customBloc,
+    void Function(String itemId)? onItemTap,
+    VoidCallback? onBack,
+  }) async {
+    _ensureInitialized();
+
+    final bloc = customBloc ?? createThreadsBloc();
+    bloc.add(const MyItemsStarted());
+
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (routeContext) {
+          return FeedbackOSThemeProvider(
+            theme: theme,
+            child: BlocProvider<ThreadsBloc>.value(
+              value: bloc,
+              child: MyFeedbackListView(
+                onBack: onBack ?? () => Navigator.of(routeContext).pop(),
+                onItemTap: onItemTap ??
+                    (itemId) => openThreadDetail(
+                          context: routeContext,
+                          itemId: itemId,
+                          customBloc: bloc,
+                        ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  /// Alias for [openFeedbackDashboard].
+  Future<void> openMyFeedback({
+    required BuildContext context,
+    ThreadsBloc? customBloc,
+    void Function(String itemId)? onItemTap,
+    VoidCallback? onBack,
+  }) =>
+      openFeedbackDashboard(
+        context: context,
+        customBloc: customBloc,
+        onItemTap: onItemTap,
+        onBack: onBack,
+      );
+
+  /// Opens the [ThreadDetailView] on a new screen for discussion thread replies.
+  ///
+  /// Safe to call from any valid [BuildContext].
+  /// Adheres to project Golden Rule 6 & 7: Bloc is instantiated outside the UI tree
+  /// and injected cleanly via [BlocProvider.value].
+  Future<void> openThreadDetail({
+    required BuildContext context,
+    required String itemId,
+    ThreadsBloc? customBloc,
+    VoidCallback? onBack,
+  }) async {
+    _ensureInitialized();
+
+    final bloc = customBloc ?? createThreadsBloc();
+    bloc.add(ThreadDetailStarted(itemId));
+
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (routeContext) {
+          return FeedbackOSThemeProvider(
+            theme: theme,
+            child: BlocProvider<ThreadsBloc>.value(
+              value: bloc,
+              child: ThreadDetailView(
+                itemId: itemId,
+                onBack: onBack ?? () => Navigator.of(routeContext).pop(),
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 

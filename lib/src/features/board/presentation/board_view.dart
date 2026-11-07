@@ -10,8 +10,15 @@ import '../state/board_state.dart';
 /// Community feedback board view with sorting, pagination, and upvoting.
 class BoardView extends StatelessWidget {
   final VoidCallback? onBack;
+  final VoidCallback? onOpenDashboard;
+  final VoidCallback? onOpenRoadmap;
 
-  const BoardView({super.key, this.onBack});
+  const BoardView({
+    super.key,
+    this.onBack,
+    this.onOpenDashboard,
+    this.onOpenRoadmap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -32,6 +39,22 @@ class BoardView extends StatelessWidget {
                 onPressed: onBack,
               )
             : null,
+        actions: [
+          if (onOpenRoadmap != null)
+            IconButton(
+              key: const Key('board_open_roadmap_button'),
+              tooltip: 'Product Roadmap',
+              icon: Icon(Icons.map_outlined, color: theme.titleColor),
+              onPressed: onOpenRoadmap,
+            ),
+          if (onOpenDashboard != null)
+            IconButton(
+              key: const Key('board_open_dashboard_button'),
+              tooltip: 'Track My Requests',
+              icon: Icon(Icons.inbox_outlined, color: theme.titleColor),
+              onPressed: onOpenDashboard,
+            ),
+        ],
       ),
       body: BlocConsumer<BoardBloc, BoardState>(
         listener: (context, state) {

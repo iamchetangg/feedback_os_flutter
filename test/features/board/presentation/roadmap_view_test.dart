@@ -93,5 +93,46 @@ void main() {
       expect(find.text('Shipped'), findsOneWidget);
       expect(find.text('Export to CSV'), findsOneWidget);
     });
+
+    testWidgets(
+        'renders and fires onOpenDashboard, onOpenBoard, and onOpenMyFeedback',
+        (tester) async {
+      bool dashboardOpened = false;
+      bool boardOpened = false;
+      bool myFeedbackOpened = false;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: BlocProvider<BoardBloc>.value(
+            value: bloc,
+            child: RoadmapView(
+              onOpenDashboard: () => dashboardOpened = true,
+              onOpenBoard: () => boardOpened = true,
+              onOpenMyFeedback: () => myFeedbackOpened = true,
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump();
+
+      final dashboardFinder =
+          find.byKey(const Key('roadmap_open_dashboard_button'));
+      final boardFinder = find.byKey(const Key('roadmap_open_board_button'));
+      final myFeedbackFinder =
+          find.byKey(const Key('roadmap_open_my_feedback_button'));
+
+      expect(dashboardFinder, findsOneWidget);
+      expect(boardFinder, findsOneWidget);
+      expect(myFeedbackFinder, findsOneWidget);
+
+      await tester.tap(dashboardFinder);
+      await tester.tap(boardFinder);
+      await tester.tap(myFeedbackFinder);
+
+      expect(dashboardOpened, isTrue);
+      expect(boardOpened, isTrue);
+      expect(myFeedbackOpened, isTrue);
+    });
   });
 }

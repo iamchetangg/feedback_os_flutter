@@ -10,8 +10,17 @@ import '../state/board_state.dart';
 /// Grouped roadmap view displaying planned, in-progress, and shipped features.
 class RoadmapView extends StatelessWidget {
   final VoidCallback? onBack;
+  final VoidCallback? onOpenDashboard;
+  final VoidCallback? onOpenBoard;
+  final VoidCallback? onOpenMyFeedback;
 
-  const RoadmapView({super.key, this.onBack});
+  const RoadmapView({
+    super.key,
+    this.onBack,
+    this.onOpenDashboard,
+    this.onOpenBoard,
+    this.onOpenMyFeedback,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -34,6 +43,29 @@ class RoadmapView extends StatelessWidget {
                   onPressed: onBack,
                 )
               : null,
+          actions: [
+            if (onOpenBoard != null)
+              IconButton(
+                key: const Key('roadmap_open_board_button'),
+                tooltip: 'Feedback Board',
+                icon: Icon(Icons.forum_outlined, color: theme.titleColor),
+                onPressed: onOpenBoard,
+              ),
+            if (onOpenDashboard != null)
+              IconButton(
+                key: const Key('roadmap_open_dashboard_button'),
+                tooltip: 'Feedback Dashboard',
+                icon: Icon(Icons.dashboard_outlined, color: theme.titleColor),
+                onPressed: onOpenDashboard,
+              ),
+            if (onOpenMyFeedback != null)
+              IconButton(
+                key: const Key('roadmap_open_my_feedback_button'),
+                tooltip: 'Track My Requests',
+                icon: Icon(Icons.inbox_outlined, color: theme.titleColor),
+                onPressed: onOpenMyFeedback,
+              ),
+          ],
           bottom: TabBar(
             labelColor: theme.primaryColor,
             unselectedLabelColor: theme.mutedTextColor,

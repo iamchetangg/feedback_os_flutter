@@ -91,5 +91,38 @@ void main() {
       expect(find.text('You submitted'), findsOneWidget);
       expect(find.text('15'), findsOneWidget);
     });
+
+    testWidgets('renders and fires onOpenDashboard and onOpenRoadmap',
+        (tester) async {
+      bool dashboardOpened = false;
+      bool roadmapOpened = false;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: BlocProvider<BoardBloc>.value(
+            value: bloc,
+            child: BoardView(
+              onOpenDashboard: () => dashboardOpened = true,
+              onOpenRoadmap: () => roadmapOpened = true,
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump();
+
+      final dashboardFinder =
+          find.byKey(const Key('board_open_dashboard_button'));
+      final roadmapFinder = find.byKey(const Key('board_open_roadmap_button'));
+
+      expect(dashboardFinder, findsOneWidget);
+      expect(roadmapFinder, findsOneWidget);
+
+      await tester.tap(dashboardFinder);
+      await tester.tap(roadmapFinder);
+
+      expect(dashboardOpened, isTrue);
+      expect(roadmapOpened, isTrue);
+    });
   });
 }
