@@ -16,11 +16,13 @@ class FeedbackFormDialog extends StatelessWidget {
   final VoidCallback? onDismiss;
   final Future<ScreenshotAttachment?> Function()? onPickAttachment;
   final bool shouldShowCategory;
+  final FeedbackType initialType;
 
   const FeedbackFormDialog({
     super.key,
     this.onDismiss,
     this.onPickAttachment,
+    this.initialType = FeedbackType.bug,
     this.shouldShowCategory = true,
   });
 
@@ -58,11 +60,11 @@ class FeedbackFormDialog extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _Header(
-                    onClose: () {
-                      onDismiss?.call();
-                      Navigator.of(context, rootNavigator: true).pop();
-                    },
-                  ),
+                      onClose: () {
+                        onDismiss?.call();
+                        Navigator.of(context, rootNavigator: true).pop();
+                      },
+                      initialType: initialType),
                   const SizedBox(height: 20),
                   if (shouldShowCategory) const _TypeSelector(),
                   const SizedBox(height: 16),
@@ -86,7 +88,7 @@ class FeedbackFormDialog extends StatelessWidget {
                     ),
                   ],
                   const SizedBox(height: 24),
-                  const _SubmitButton(),
+                  _SubmitButton(initialType: initialType),
                 ],
               ),
             );
@@ -99,8 +101,8 @@ class FeedbackFormDialog extends StatelessWidget {
 
 class _Header extends StatelessWidget {
   final VoidCallback onClose;
-
-  const _Header({required this.onClose});
+  final FeedbackType initialType;
+  const _Header({required this.onClose, this.initialType = FeedbackType.bug});
 
   @override
   Widget build(BuildContext context) {
@@ -109,7 +111,9 @@ class _Header extends StatelessWidget {
       children: [
         Expanded(
           child: Text(
-            'Send Feedback',
+            initialType == FeedbackType.bug
+                ? 'Send Feedback'
+                : "Request a Feature",
             style: AppStyles.titleLarge.copyWith(color: theme.titleColor),
           ),
         ),
@@ -366,7 +370,8 @@ class _DescriptionField extends StatelessWidget {
 }
 
 class _SubmitButton extends StatelessWidget {
-  const _SubmitButton();
+  const _SubmitButton({this.initialType = FeedbackType.bug});
+  final FeedbackType initialType;
 
   @override
   Widget build(BuildContext context) {
@@ -399,7 +404,7 @@ class _SubmitButton extends StatelessWidget {
               ),
             )
           : Text(
-              'Send Feedback',
+              initialType == FeedbackType.bug ? 'Send' : 'Send',
               style: AppStyles.labelLarge.copyWith(color: theme.surfaceColor),
             ),
     );

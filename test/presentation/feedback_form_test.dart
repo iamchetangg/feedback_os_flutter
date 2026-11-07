@@ -39,8 +39,8 @@ void main() {
       await tester.pumpWidget(buildTestableWidget(bloc));
       await tester.pumpAndSettle();
 
-      expect(find.text('Send Feedback'),
-          findsNWidgets(2)); // Header title + button text
+      expect(find.text('Send Feedback'), findsOneWidget); // Header title
+      expect(find.text('Send'), findsOneWidget); // Submit button text
       expect(find.byKey(const Key('feedback_type_bug')), findsOneWidget);
       expect(find.byKey(const Key('feedback_type_feature')), findsOneWidget);
       expect(find.byKey(const Key('feedback_title_field')), findsOneWidget);

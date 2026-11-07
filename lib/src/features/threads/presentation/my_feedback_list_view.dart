@@ -153,15 +153,13 @@ class MyFeedbackListView extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: isBug
-                    ? theme.errorBackgroundColor
-                    : theme.primaryLightColor,
+                color: isBug ? theme.errorColor : theme.primaryColor,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
                 isBug ? Icons.bug_report_outlined : Icons.lightbulb_outline,
                 size: 20,
-                color: isBug ? theme.errorColor : theme.primaryColor,
+                color: isBug ? theme.onPrimaryColor : theme.onPrimaryColor,
               ),
             ),
             const SizedBox(width: 12),

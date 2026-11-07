@@ -103,8 +103,9 @@ class BoardView extends StatelessWidget {
           ChoiceChip(
             label: const Text('Top'),
             selected: state.sort == 'top',
-            selectedColor: theme.primaryLightColor,
+            selectedColor: theme.secondaryBackgroundColor,
             side: BorderSide(color: theme.borderColor),
+            checkmarkColor: theme.primaryColor,
             labelStyle: state.sort == 'top'
                 ? AppStyles.labelSmall.copyWith(
                     color: theme.primaryColor,
@@ -121,7 +122,8 @@ class BoardView extends StatelessWidget {
           ChoiceChip(
             label: const Text('Newest'),
             selected: state.sort == 'new',
-            selectedColor: theme.primaryLightColor,
+            checkmarkColor: theme.primaryColor,
+            selectedColor: theme.secondaryBackgroundColor,
             side: BorderSide(color: theme.borderColor),
             labelStyle: state.sort == 'new'
                 ? AppStyles.labelSmall.copyWith(
@@ -287,7 +289,7 @@ class BoardView extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
-                          color: theme.primaryLightColor,
+                          color: theme.secondaryBackgroundColor,
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
@@ -319,7 +321,8 @@ class BoardView extends StatelessWidget {
         width: 48,
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: hasVoted ? theme.primaryLightColor : theme.backgroundColor,
+          color:
+              hasVoted ? theme.secondaryBackgroundColor : theme.backgroundColor,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: hasVoted ? theme.primaryColor : theme.borderColor,
