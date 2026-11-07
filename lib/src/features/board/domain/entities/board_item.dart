@@ -11,6 +11,7 @@ class BoardItem extends Equatable {
   final bool hasVoted;
   final bool isMine;
   final DateTime createdAt;
+  final int replyCount;
 
   const BoardItem({
     required this.id,
@@ -22,6 +23,7 @@ class BoardItem extends Equatable {
     required this.hasVoted,
     required this.isMine,
     required this.createdAt,
+    this.replyCount = 0,
   });
 
   BoardItem copyWith({
@@ -34,6 +36,7 @@ class BoardItem extends Equatable {
     bool? hasVoted,
     bool? isMine,
     DateTime? createdAt,
+    int? replyCount,
   }) {
     return BoardItem(
       id: id ?? this.id,
@@ -45,6 +48,7 @@ class BoardItem extends Equatable {
       hasVoted: hasVoted ?? this.hasVoted,
       isMine: isMine ?? this.isMine,
       createdAt: createdAt ?? this.createdAt,
+      replyCount: replyCount ?? this.replyCount,
     );
   }
 
@@ -59,5 +63,6 @@ class BoardItem extends Equatable {
         hasVoted,
         isMine,
         createdAt,
+        replyCount,
       ];
 }

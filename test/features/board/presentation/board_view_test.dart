@@ -83,11 +83,10 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.text('Community Board'), findsOneWidget);
+      expect(find.text('Feedback'), findsOneWidget);
       expect(find.text('Dark Mode Support'), findsOneWidget);
       expect(find.text('Support dark mode please'), findsOneWidget);
-      expect(find.text('UI'), findsOneWidget);
-      expect(find.text('planned'), findsOneWidget);
+      expect(find.text('Planned'), findsOneWidget);
       expect(find.text('You submitted'), findsOneWidget);
       expect(find.text('15'), findsOneWidget);
     });

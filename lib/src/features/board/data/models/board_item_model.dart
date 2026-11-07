@@ -11,6 +11,7 @@ class BoardItemModel extends BoardItem {
     required super.hasVoted,
     required super.isMine,
     required super.createdAt,
+    super.replyCount = 0,
   });
 
   factory BoardItemModel.fromJson(Map<String, dynamic> json) {
@@ -26,6 +27,10 @@ class BoardItemModel extends BoardItem {
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
           : DateTime.now(),
+      replyCount: (json['reply_count'] as num?)?.toInt() ??
+          (json['replies_count'] as num?)?.toInt() ??
+          (json['comment_count'] as num?)?.toInt() ??
+          0,
     );
   }
 
@@ -40,6 +45,7 @@ class BoardItemModel extends BoardItem {
       'has_voted': hasVoted,
       'is_mine': isMine,
       'created_at': createdAt.toIso8601String(),
+      'reply_count': replyCount,
     };
   }
 
@@ -54,6 +60,7 @@ class BoardItemModel extends BoardItem {
       hasVoted: entity.hasVoted,
       isMine: entity.isMine,
       createdAt: entity.createdAt,
+      replyCount: entity.replyCount,
     );
   }
 }

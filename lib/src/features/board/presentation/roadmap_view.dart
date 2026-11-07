@@ -1,19 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../../core/theme/theme.dart';
 import '../../../../core/theme/styles.dart';
+import '../../../../core/theme/theme.dart';
 import '../domain/entities/board_item.dart';
 import '../state/board_bloc.dart';
 import '../state/board_event.dart';
 import '../state/board_state.dart';
 
+enum RoadmapStage { planned, inProgress, shipped }
+
 /// Grouped roadmap view displaying planned, in-progress, and shipped features.
-class RoadmapView extends StatelessWidget {
+class RoadmapView extends StatefulWidget {
   final VoidCallback? onBack;
   final VoidCallback? onOpenDashboard;
   final VoidCallback? onOpenBoard;
   final VoidCallback? onOpenMyFeedback;
   final bool isFromBoard;
+  final bool isEmbedded;
+  final void Function(String itemId)? onItemTap;
 
   const RoadmapView({
     super.key,
@@ -22,202 +26,300 @@ class RoadmapView extends StatelessWidget {
     this.onOpenBoard,
     this.onOpenMyFeedback,
     this.isFromBoard = false,
+    this.isEmbedded = false,
+    this.onItemTap,
   });
+
+  @override
+  State<RoadmapView> createState() => _RoadmapViewState();
+}
+
+class _RoadmapViewState extends State<RoadmapView> {
+  RoadmapStage _selectedStage = RoadmapStage.planned;
 
   @override
   Widget build(BuildContext context) {
     final theme = FeedbackOSTheme.of(context);
-    final effectiveOpenDashboard = onOpenDashboard ??
-        (isFromBoard ? () => Navigator.of(context).pop() : null);
-    final effectiveOpenBoard = onOpenBoard ??
-        (isFromBoard ? () => Navigator.of(context).pop() : null);
+    final effectiveOpenBoard = widget.onOpenBoard ??
+        (widget.isFromBoard ? () => Navigator.of(context).pop() : null);
+    final effectiveOpenDashboard = widget.onOpenDashboard ??
+        (widget.isFromBoard ? () => Navigator.of(context).pop() : null);
 
-    return DefaultTabController(
-      length: 3,
-      child: Scaffold(
-        backgroundColor: theme.backgroundColor,
-        appBar: AppBar(
-          title: Text(
-            'Product Roadmap',
-            style: AppStyles.titleMedium.copyWith(color: theme.titleColor),
-          ),
-          backgroundColor: theme.surfaceColor,
-          elevation: 0.5,
-          leading: onBack != null
-              ? IconButton(
-                  icon: Icon(Icons.arrow_back, color: theme.titleColor),
-                  onPressed: onBack,
-                )
-              : null,
-          actions: [
-            if (effectiveOpenBoard != null)
-              IconButton(
-                key: const Key('roadmap_open_board_button'),
-                tooltip: 'Feedback Board',
-                icon: Icon(Icons.forum_outlined, color: theme.titleColor),
-                onPressed: effectiveOpenBoard,
+    final content = BlocBuilder<BoardBloc, BoardState>(
+      builder: (context, state) {
+        if (state.status == BoardStatus.loading && state.roadmap == null) {
+          return Center(
+            child: CircularProgressIndicator(color: theme.accentColor),
+          );
+        }
+
+        if (state.status == BoardStatus.failure && state.roadmap == null) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline, size: 48, color: theme.errorColor),
+                const SizedBox(height: 12),
+                Text(
+                  state.errorMessage ?? 'Failed to load roadmap',
+                  style: AppStyles.bodyMedium
+                      .copyWith(color: theme.secondaryTextColor),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.buttonColor,
+                    foregroundColor: theme.onPrimaryColor,
+                  ),
+                  onPressed: () =>
+                      context.read<BoardBloc>().add(const RoadmapStarted()),
+                  child: Text(
+                    'Retry',
+                    style: AppStyles.labelMedium
+                        .copyWith(color: theme.onPrimaryColor),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final roadmap = state.roadmap;
+        final plannedItems = roadmap?.planned ?? const [];
+        final inProgressItems = roadmap?.inProgress ?? const [];
+        final shippedItems = roadmap?.shipped ?? const [];
+
+        final currentItems = switch (_selectedStage) {
+          RoadmapStage.planned => plannedItems,
+          RoadmapStage.inProgress => inProgressItems,
+          RoadmapStage.shipped => shippedItems,
+        };
+
+        return Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              child: Row(
+                children: [
+                  _buildStageChip(
+                    stage: RoadmapStage.planned,
+                    label: 'Planned',
+                    count: plannedItems.length,
+                    theme: theme,
+                  ),
+                  const SizedBox(width: 6),
+                  _buildStageChip(
+                    stage: RoadmapStage.inProgress,
+                    label: 'In progress',
+                    count: inProgressItems.length,
+                    theme: theme,
+                  ),
+                  const SizedBox(width: 6),
+                  _buildStageChip(
+                    stage: RoadmapStage.shipped,
+                    label: 'Shipped',
+                    count: shippedItems.length,
+                    theme: theme,
+                  ),
+                ],
               ),
-            if (effectiveOpenDashboard != null)
-              IconButton(
-                key: const Key('roadmap_open_dashboard_button'),
-                tooltip: 'Feedback Dashboard',
-                icon: Icon(Icons.dashboard_outlined, color: theme.titleColor),
-                onPressed: effectiveOpenDashboard,
-              ),
-            if (onOpenMyFeedback != null)
-              IconButton(
-                key: const Key('roadmap_open_my_feedback_button'),
-                tooltip: 'Track My Requests',
-                icon: Icon(Icons.inbox_outlined, color: theme.titleColor),
-                onPressed: onOpenMyFeedback,
-              ),
+            ),
+            Expanded(
+              child: currentItems.isEmpty
+                  ? Center(
+                      child: Text(
+                        'Nothing here yet.',
+                        style: AppStyles.bodyMedium.copyWith(
+                          color: theme.placeholderColor,
+                          fontSize: 13,
+                        ),
+                      ),
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(14, 4, 14, 80),
+                      itemCount: currentItems.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 10),
+                      itemBuilder: (context, index) {
+                        final item = currentItems[index];
+                        return _buildRoadmapCard(context, item, theme);
+                      },
+                    ),
+            ),
           ],
-          bottom: TabBar(
-            labelColor: theme.primaryColor,
-            unselectedLabelColor: theme.mutedTextColor,
-            indicatorColor: theme.primaryColor,
-            tabs: const [
-              Tab(text: 'Planned'),
-              Tab(text: 'In Progress'),
-              Tab(text: 'Shipped'),
-            ],
+        );
+      },
+    );
+
+    if (widget.isEmbedded) {
+      return Container(
+        color: theme.backgroundColor,
+        child: content,
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: theme.backgroundColor,
+      appBar: AppBar(
+        title: Text(
+          'Feedback',
+          style: AppStyles.titleAppBar.copyWith(color: theme.titleColor),
+        ),
+        centerTitle: true,
+        backgroundColor: theme.surfaceColor,
+        elevation: 0.5,
+        leading: widget.onBack != null
+            ? IconButton(
+                icon: Icon(Icons.arrow_back_ios_new_rounded,
+                    color: theme.titleColor, size: 20),
+                onPressed: widget.onBack,
+              )
+            : null,
+        actions: [
+          if (effectiveOpenBoard != null)
+            IconButton(
+              key: const Key('roadmap_open_board_button'),
+              tooltip: 'Feedback Board',
+              icon: Icon(Icons.forum_outlined, color: theme.titleColor),
+              onPressed: effectiveOpenBoard,
+            ),
+          if (effectiveOpenDashboard != null)
+            IconButton(
+              key: const Key('roadmap_open_dashboard_button'),
+              tooltip: 'Feedback Dashboard',
+              icon: Icon(Icons.dashboard_outlined, color: theme.titleColor),
+              onPressed: effectiveOpenDashboard,
+            ),
+          if (widget.onOpenMyFeedback != null)
+            IconButton(
+              key: const Key('roadmap_open_my_feedback_button'),
+              tooltip: 'Track My Requests',
+              icon: Icon(Icons.inbox_outlined, color: theme.titleColor),
+              onPressed: widget.onOpenMyFeedback,
+            ),
+        ],
+      ),
+      body: content,
+    );
+  }
+
+  Widget _buildStageChip({
+    required RoadmapStage stage,
+    required String label,
+    required int count,
+    required FeedbackOSTheme theme,
+  }) {
+    final isSelected = _selectedStage == stage;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedStage = stage;
+        });
+      },
+      child: Container(
+        height: 30,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? theme.accentSoftColor : Colors.transparent,
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(
+            color: isSelected ? Colors.transparent : theme.borderMutedColor,
           ),
         ),
-        body: BlocBuilder<BoardBloc, BoardState>(
-          builder: (context, state) {
-            if (state.status == BoardStatus.loading && state.roadmap == null) {
-              return Center(
-                child: CircularProgressIndicator(color: theme.primaryColor),
-              );
-            }
-
-            if (state.status == BoardStatus.failure && state.roadmap == null) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.error_outline,
-                        size: 48, color: theme.errorColor),
-                    const SizedBox(height: 12),
-                    Text(
-                      state.errorMessage ?? 'Failed to load roadmap',
-                      style: AppStyles.bodyMedium
-                          .copyWith(color: theme.secondaryTextColor),
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: theme.buttonColor,
-                        foregroundColor: theme.onPrimaryColor,
-                      ),
-                      onPressed: () =>
-                          context.read<BoardBloc>().add(const RoadmapStarted()),
-                      child: Text(
-                        'Retry',
-                        style: AppStyles.labelMedium
-                            .copyWith(color: theme.onPrimaryColor),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            final roadmap = state.roadmap;
-            return TabBarView(
-              children: [
-                _buildList(context, roadmap?.planned ?? const []),
-                _buildList(context, roadmap?.inProgress ?? const []),
-                _buildList(context, roadmap?.shipped ?? const []),
-              ],
-            );
-          },
+        alignment: Alignment.center,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: AppStyles.chipLabel.copyWith(
+                color: isSelected ? theme.accentColor : theme.mutedTextColor,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(width: 5),
+            Text(
+              '$count',
+              style: AppStyles.meta.copyWith(
+                color: isSelected
+                    ? theme.accentColor
+                    : theme.mutedTextColor.withAlpha(190),
+                fontSize: 11.5,
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildList(BuildContext context, List<BoardItem> items) {
-    final theme = FeedbackOSTheme.of(context);
-
-    if (items.isEmpty) {
-      return Center(
-        child: Text(
-          'No items in this stage.',
-          style: AppStyles.bodyMedium.copyWith(color: theme.mutedTextColor),
+  Widget _buildRoadmapCard(
+    BuildContext context,
+    BoardItem item,
+    FeedbackOSTheme theme,
+  ) {
+    return GestureDetector(
+      onTap: () => widget.onItemTap?.call(item.id),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: theme.surfaceColor,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: theme.borderColor),
         ),
-      );
-    }
-
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: items.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        final item = items[index];
-        return Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: theme.surfaceColor,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: theme.borderColor),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Text(
-                      item.title,
-                      style: AppStyles.titleSmall
-                          .copyWith(color: theme.titleColor),
+                  Text(
+                    item.title,
+                    style: AppStyles.cardTitle.copyWith(
+                      color: theme.titleColor,
                     ),
                   ),
-                  Row(
-                    children: [
-                      Icon(Icons.thumb_up_alt_outlined,
-                          size: 14, color: theme.mutedTextColor),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${item.voteCount}',
-                        style: AppStyles.labelSmall
-                            .copyWith(color: theme.mutedTextColor),
+                  if (item.description.isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    Text(
+                      item.description,
+                      style: AppStyles.bodySmall.copyWith(
+                        color: theme.mutedTextColor,
+                        fontSize: 12.5,
+                        height: 1.4,
                       ),
-                    ],
-                  ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ],
               ),
-              if (item.description.isNotEmpty) ...[
-                const SizedBox(height: 6),
+            ),
+            const SizedBox(width: 12),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.thumb_up_alt_outlined,
+                  size: 13,
+                  color: theme.mutedTextColor,
+                ),
+                const SizedBox(width: 4),
                 Text(
-                  item.description,
-                  style: AppStyles.bodySmall
-                      .copyWith(color: theme.secondaryTextColor),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-              if (item.category != null) ...[
-                const SizedBox(height: 8),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: theme.secondaryBackgroundColor,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    item.category!,
-                    style: AppStyles.labelSmall
-                        .copyWith(color: theme.secondaryTextColor),
+                  '${item.voteCount}',
+                  style: AppStyles.meta.copyWith(
+                    color: theme.mutedTextColor,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
-            ],
-          ),
-        );
-      },
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

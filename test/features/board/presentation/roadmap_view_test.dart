@@ -87,9 +87,9 @@ void main() {
 
       await tester.pump();
 
-      expect(find.text('Product Roadmap'), findsOneWidget);
+      expect(find.text('Feedback'), findsOneWidget);
       expect(find.text('Planned'), findsOneWidget);
-      expect(find.text('In Progress'), findsOneWidget);
+      expect(find.text('In progress'), findsOneWidget);
       expect(find.text('Shipped'), findsOneWidget);
       expect(find.text('Export to CSV'), findsOneWidget);
     });
