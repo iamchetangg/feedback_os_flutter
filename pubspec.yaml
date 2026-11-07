@@ -1,7 +1,7 @@
 name: feedback_os_flutter
-description: A production-minded Flutter SDK for FeedbackOS bug reports, feature requests, and roadmap integration.
+description: Flutter SDK for integrating FeedbackOS in mobile applications. Collect user feedback, trigger forms, and manage feedback submissions.
 version: 0.1.0
-publish_to: 'https://pub.dev' # until ready for pub.dev
+publish_to: https://pub.dev # until ready for pub.dev
 repository: https://github.com/iamchetangg/feedback_os_flutter
 
 environment:
