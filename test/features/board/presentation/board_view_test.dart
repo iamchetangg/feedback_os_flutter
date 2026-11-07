@@ -124,5 +124,47 @@ void main() {
       expect(dashboardOpened, isTrue);
       expect(roadmapOpened, isTrue);
     });
+
+    testWidgets('isFromRoadmap true pops current screen on roadmap button press',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                return ElevatedButton(
+                  key: const Key('push_board_btn'),
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => BlocProvider<BoardBloc>.value(
+                          value: bloc,
+                          child: const BoardView(isFromRoadmap: true),
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Text('Push Board'),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byKey(const Key('push_board_btn')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(BoardView), findsOneWidget);
+
+      final roadmapFinder = find.byKey(const Key('board_open_roadmap_button'));
+      expect(roadmapFinder, findsOneWidget);
+
+      await tester.tap(roadmapFinder);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(BoardView), findsNothing);
+      expect(find.byKey(const Key('push_board_btn')), findsOneWidget);
+    });
   });
 }

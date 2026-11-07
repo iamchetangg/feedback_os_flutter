@@ -12,17 +12,21 @@ class BoardView extends StatelessWidget {
   final VoidCallback? onBack;
   final VoidCallback? onOpenDashboard;
   final VoidCallback? onOpenRoadmap;
+  final bool isFromRoadmap;
 
   const BoardView({
     super.key,
     this.onBack,
     this.onOpenDashboard,
     this.onOpenRoadmap,
+    this.isFromRoadmap = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = FeedbackOSTheme.of(context);
+    final effectiveOpenRoadmap = onOpenRoadmap ??
+        (isFromRoadmap ? () => Navigator.of(context).pop() : null);
 
     return Scaffold(
       backgroundColor: theme.backgroundColor,
@@ -40,12 +44,12 @@ class BoardView extends StatelessWidget {
               )
             : null,
         actions: [
-          if (onOpenRoadmap != null)
+          if (effectiveOpenRoadmap != null)
             IconButton(
               key: const Key('board_open_roadmap_button'),
               tooltip: 'Product Roadmap',
               icon: Icon(Icons.map_outlined, color: theme.titleColor),
-              onPressed: onOpenRoadmap,
+              onPressed: effectiveOpenRoadmap,
             ),
           if (onOpenDashboard != null)
             IconButton(

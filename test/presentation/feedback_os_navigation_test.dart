@@ -186,6 +186,116 @@ void main() {
       expect(find.text('My Feedback'), findsOneWidget);
     });
 
+    testWidgets(
+        'toggling between Roadmap and Board pops back rather than pushing repetitive pages',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                return ElevatedButton(
+                  key: const Key('open_roadmap_test_btn'),
+                  onPressed: () =>
+                      FeedbackOS.instance.openRoadmap(context: context),
+                  child: const Text('Open Roadmap'),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      // Open roadmap
+      await tester.tap(find.byKey(const Key('open_roadmap_test_btn')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(RoadmapView), findsOneWidget);
+      expect(find.byType(BoardView), findsNothing);
+
+      // Click "Feedback Dashboard" to navigate to BoardView
+      await tester.tap(find.byKey(const Key('roadmap_open_dashboard_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(BoardView), findsOneWidget);
+
+      // Click "Product Roadmap" on BoardView -> must POP back to existing RoadmapView, not push
+      await tester.tap(find.byKey(const Key('board_open_roadmap_button')));
+      await tester.pumpAndSettle();
+
+      // BoardView is gone, exactly one RoadmapView is present
+      expect(find.byType(BoardView), findsNothing);
+      expect(find.byType(RoadmapView), findsOneWidget);
+
+      // Click "Feedback Dashboard" again
+      await tester.tap(find.byKey(const Key('roadmap_open_dashboard_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(BoardView), findsOneWidget);
+
+      // Click "Product Roadmap" again -> pops back
+      await tester.tap(find.byKey(const Key('board_open_roadmap_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(BoardView), findsNothing);
+      expect(find.byType(RoadmapView), findsOneWidget);
+
+      // Clicking back on RoadmapView returns to host screen
+      await tester.tap(find.byIcon(Icons.arrow_back).first);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(RoadmapView), findsNothing);
+      expect(find.byKey(const Key('open_roadmap_test_btn')), findsOneWidget);
+    });
+
+    testWidgets(
+        'toggling from Board to Roadmap pops back rather than pushing repetitive pages',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                return ElevatedButton(
+                  key: const Key('open_board_test_btn'),
+                  onPressed: () =>
+                      FeedbackOS.instance.openBoard(context: context),
+                  child: const Text('Open Board'),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      // Open board
+      await tester.tap(find.byKey(const Key('open_board_test_btn')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(BoardView), findsOneWidget);
+      expect(find.byType(RoadmapView), findsNothing);
+
+      // Click "Product Roadmap" on BoardView to navigate to RoadmapView
+      await tester.tap(find.byKey(const Key('board_open_roadmap_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(RoadmapView), findsOneWidget);
+
+      // Click "Feedback Dashboard" on RoadmapView -> must POP back to existing BoardView
+      await tester.tap(find.byKey(const Key('roadmap_open_dashboard_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(RoadmapView), findsNothing);
+      expect(find.byType(BoardView), findsOneWidget);
+
+      // Clicking back on BoardView returns to host screen
+      await tester.tap(find.byIcon(Icons.arrow_back).first);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(BoardView), findsNothing);
+      expect(find.byKey(const Key('open_board_test_btn')), findsOneWidget);
+    });
+
     testWidgets('openBoard pushes BoardView directly', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
@@ -265,3 +375,4 @@ void main() {
     });
   });
 }
+

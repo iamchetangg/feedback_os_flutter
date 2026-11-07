@@ -875,6 +875,9 @@ class FeedbackOS {
   /// Safe to call from any valid [BuildContext].
   /// Adheres to project Golden Rule 6 & 7: Bloc is instantiated outside the UI tree
   /// and injected cleanly via [BlocProvider.value].
+  ///
+  /// When navigating between [RoadmapView] and [BoardView], existing parent routes
+  /// are popped rather than pushed indefinitely to avoid duplicate route buildup.
   Future<void> openRoadmap({
     required BuildContext context,
     BoardBloc? customBloc,
@@ -882,32 +885,53 @@ class FeedbackOS {
     VoidCallback? onOpenBoard,
     VoidCallback? onOpenMyFeedback,
     VoidCallback? onBack,
+    bool isFromBoard = false,
+    bool replace = false,
   }) async {
     _ensureInitialized();
 
     final bloc = customBloc ?? createBoardBloc();
     bloc.add(const RoadmapStarted());
 
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (routeContext) {
-          return FeedbackOSThemeProvider(
-            theme: theme,
-            child: BlocProvider<BoardBloc>.value(
-              value: bloc,
-              child: RoadmapView(
-                onBack: onBack ?? () => Navigator.of(routeContext).pop(),
-                onOpenDashboard: onOpenDashboard ??
-                    () => openBoard(context: routeContext),
-                onOpenBoard: onOpenBoard,
-                onOpenMyFeedback: onOpenMyFeedback ??
-                    () => openFeedbackDashboard(context: routeContext),
-              ),
+    final route = MaterialPageRoute<void>(
+      settings: const RouteSettings(name: 'FeedbackOS_Roadmap'),
+      builder: (routeContext) {
+        return FeedbackOSThemeProvider(
+          theme: theme,
+          child: BlocProvider<BoardBloc>.value(
+            value: bloc,
+            child: RoadmapView(
+              isFromBoard: isFromBoard,
+              onBack: onBack ?? () => Navigator.of(routeContext).pop(),
+              onOpenDashboard: onOpenDashboard ??
+                  (isFromBoard
+                      ? () => Navigator.of(routeContext).pop()
+                      : () => openBoard(
+                            context: routeContext,
+                            customBloc: bloc,
+                            isFromRoadmap: true,
+                          )),
+              onOpenBoard: onOpenBoard ??
+                  (isFromBoard
+                      ? () => Navigator.of(routeContext).pop()
+                      : () => openBoard(
+                            context: routeContext,
+                            customBloc: bloc,
+                            isFromRoadmap: true,
+                          )),
+              onOpenMyFeedback: onOpenMyFeedback ??
+                  () => openFeedbackDashboard(context: routeContext),
             ),
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
+
+    if (replace) {
+      await Navigator.of(context, rootNavigator: true).pushReplacement(route);
+    } else {
+      await Navigator.of(context, rootNavigator: true).push(route);
+    }
   }
 
   /// Opens the [BoardView] on a new screen.
@@ -915,37 +939,54 @@ class FeedbackOS {
   /// Safe to call from any valid [BuildContext].
   /// Adheres to project Golden Rule 6 & 7: Bloc is instantiated outside the UI tree
   /// and injected cleanly via [BlocProvider.value].
+  ///
+  /// When navigating between [BoardView] and [RoadmapView], existing parent routes
+  /// are popped rather than pushed indefinitely to avoid duplicate route buildup.
   Future<void> openBoard({
     required BuildContext context,
     BoardBloc? customBloc,
     VoidCallback? onOpenDashboard,
     VoidCallback? onOpenRoadmap,
     VoidCallback? onBack,
+    bool isFromRoadmap = false,
+    bool replace = false,
   }) async {
     _ensureInitialized();
 
     final bloc = customBloc ?? createBoardBloc();
     bloc.add(const BoardStarted());
 
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (routeContext) {
-          return FeedbackOSThemeProvider(
-            theme: theme,
-            child: BlocProvider<BoardBloc>.value(
-              value: bloc,
-              child: BoardView(
-                onBack: onBack ?? () => Navigator.of(routeContext).pop(),
-                onOpenDashboard: onOpenDashboard ??
-                    () => openFeedbackDashboard(context: routeContext),
-                onOpenRoadmap: onOpenRoadmap ??
-                    () => openRoadmap(context: routeContext),
-              ),
+    final route = MaterialPageRoute<void>(
+      settings: const RouteSettings(name: 'FeedbackOS_Board'),
+      builder: (routeContext) {
+        return FeedbackOSThemeProvider(
+          theme: theme,
+          child: BlocProvider<BoardBloc>.value(
+            value: bloc,
+            child: BoardView(
+              isFromRoadmap: isFromRoadmap,
+              onBack: onBack ?? () => Navigator.of(routeContext).pop(),
+              onOpenDashboard: onOpenDashboard ??
+                  () => openFeedbackDashboard(context: routeContext),
+              onOpenRoadmap: onOpenRoadmap ??
+                  (isFromRoadmap
+                      ? () => Navigator.of(routeContext).pop()
+                      : () => openRoadmap(
+                            context: routeContext,
+                            customBloc: bloc,
+                            isFromBoard: true,
+                          )),
             ),
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
+
+    if (replace) {
+      await Navigator.of(context, rootNavigator: true).pushReplacement(route);
+    } else {
+      await Navigator.of(context, rootNavigator: true).push(route);
+    }
   }
 
   /// Opens the [MyFeedbackListView] on a new screen where users can track
@@ -965,7 +1006,7 @@ class FeedbackOS {
     final bloc = customBloc ?? createThreadsBloc();
     bloc.add(const MyItemsStarted());
 
-    await Navigator.of(context).push(
+    await Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute<void>(
         builder: (routeContext) {
           return FeedbackOSThemeProvider(

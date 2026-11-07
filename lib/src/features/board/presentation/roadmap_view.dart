@@ -13,6 +13,7 @@ class RoadmapView extends StatelessWidget {
   final VoidCallback? onOpenDashboard;
   final VoidCallback? onOpenBoard;
   final VoidCallback? onOpenMyFeedback;
+  final bool isFromBoard;
 
   const RoadmapView({
     super.key,
@@ -20,11 +21,16 @@ class RoadmapView extends StatelessWidget {
     this.onOpenDashboard,
     this.onOpenBoard,
     this.onOpenMyFeedback,
+    this.isFromBoard = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = FeedbackOSTheme.of(context);
+    final effectiveOpenDashboard = onOpenDashboard ??
+        (isFromBoard ? () => Navigator.of(context).pop() : null);
+    final effectiveOpenBoard = onOpenBoard ??
+        (isFromBoard ? () => Navigator.of(context).pop() : null);
 
     return DefaultTabController(
       length: 3,
@@ -44,19 +50,19 @@ class RoadmapView extends StatelessWidget {
                 )
               : null,
           actions: [
-            if (onOpenBoard != null)
+            if (effectiveOpenBoard != null)
               IconButton(
                 key: const Key('roadmap_open_board_button'),
                 tooltip: 'Feedback Board',
                 icon: Icon(Icons.forum_outlined, color: theme.titleColor),
-                onPressed: onOpenBoard,
+                onPressed: effectiveOpenBoard,
               ),
-            if (onOpenDashboard != null)
+            if (effectiveOpenDashboard != null)
               IconButton(
                 key: const Key('roadmap_open_dashboard_button'),
                 tooltip: 'Feedback Dashboard',
                 icon: Icon(Icons.dashboard_outlined, color: theme.titleColor),
-                onPressed: onOpenDashboard,
+                onPressed: effectiveOpenDashboard,
               ),
             if (onOpenMyFeedback != null)
               IconButton(
