@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
+
 import 'config/feedback_os_options.dart';
 import '../core/theme/theme.dart';
 import 'core/errors/exceptions.dart';
@@ -47,6 +49,7 @@ import 'features/board/domain/usecases/get_roadmap_use_case.dart';
 import 'features/board/domain/usecases/unvote_item_use_case.dart';
 import 'features/board/domain/usecases/vote_item_use_case.dart';
 import 'features/board/presentation/board_view.dart';
+import 'features/board/presentation/feedback_container_view.dart';
 import 'features/board/presentation/roadmap_view.dart';
 import 'features/board/state/board_bloc.dart';
 import 'features/board/state/board_event.dart';
@@ -65,7 +68,9 @@ import 'features/threads/presentation/my_feedback_list_view.dart';
 import 'features/threads/presentation/thread_detail_view.dart';
 import 'features/threads/state/threads_bloc.dart';
 import 'features/threads/state/threads_event.dart';
+
 import 'package:image_picker/image_picker.dart';
+
 import 'core/utils/screenshot_picker.dart';
 import 'identity/device_id_store.dart';
 import 'identity/device_info_provider.dart';
@@ -194,16 +199,17 @@ class FeedbackOS {
     ThreadsRepository? threadsRepository,
   }) async {
     await _initialize(
-        publishableKey: publishableKey,
-        options: options,
-        deviceIdStore: deviceIdStore,
-        deviceInfoProvider: deviceInfoProvider,
-        submissionStore: submissionStore,
-        httpClient: httpClient,
-        uploadRepository: uploadRepository,
-        binaryUploader: binaryUploader,
-        boardRepository: boardRepository,
-        threadsRepository: threadsRepository);
+      publishableKey: publishableKey,
+      options: options,
+      deviceIdStore: deviceIdStore,
+      deviceInfoProvider: deviceInfoProvider,
+      submissionStore: submissionStore,
+      httpClient: httpClient,
+      uploadRepository: uploadRepository,
+      binaryUploader: binaryUploader,
+      boardRepository: boardRepository,
+      threadsRepository: threadsRepository,
+    );
   }
 
   Future<void> _initialize({
@@ -254,7 +260,8 @@ class FeedbackOS {
     // Open persistent offline storage
     await _submissionStore!.open();
 
-    _httpClient = httpClient ??
+    _httpClient =
+        httpClient ??
         FeedbackOsDioClient(
           publishableKey: sanitizedKey,
           getDeviceId: () => _deviceIdStore!.getOrCreateDeviceId(),
@@ -264,22 +271,28 @@ class FeedbackOS {
     final remoteDataSource = FeedbackRemoteDataSourceImpl(client: _httpClient!);
     _repository = FeedbackRepositoryImpl(remoteDataSource: remoteDataSource);
 
-    final uploadRemoteDataSource =
-        UploadRemoteDataSourceImpl(client: _httpClient!);
-    _uploadRepository = uploadRepository ??
+    final uploadRemoteDataSource = UploadRemoteDataSourceImpl(
+      client: _httpClient!,
+    );
+    _uploadRepository =
+        uploadRepository ??
         UploadRepositoryImpl(
           remoteDataSource: uploadRemoteDataSource,
           binaryUploader: binaryUploader ?? DioBinaryUploader(),
         );
 
-    final boardRemoteDataSource =
-        BoardRemoteDataSourceImpl(client: _httpClient!);
-    _boardRepository = boardRepository ??
+    final boardRemoteDataSource = BoardRemoteDataSourceImpl(
+      client: _httpClient!,
+    );
+    _boardRepository =
+        boardRepository ??
         BoardRepositoryImpl(remoteDataSource: boardRemoteDataSource);
 
-    final threadsRemoteDataSource =
-        ThreadsRemoteDataSourceImpl(client: _httpClient!);
-    _threadsRepository = threadsRepository ??
+    final threadsRemoteDataSource = ThreadsRemoteDataSourceImpl(
+      client: _httpClient!,
+    );
+    _threadsRepository =
+        threadsRepository ??
         ThreadsRepositoryImpl(remoteDataSource: threadsRemoteDataSource);
 
     _getConfigUseCase = GetSdkConfigUseCase(_repository!);
@@ -350,13 +363,12 @@ class FeedbackOS {
       _publishableKey!,
       cancelToken: cancelToken,
     );
-    return result.fold(
-      (failure) => throw _mapFailureToException(failure),
-      (data) {
-        _cachedConfig = data;
-        return data;
-      },
-    );
+    return result.fold((failure) => throw _mapFailureToException(failure), (
+      data,
+    ) {
+      _cachedConfig = data;
+      return data;
+    });
   }
 
   /// Associates the current device with an external user ID in the host app.
@@ -376,12 +388,9 @@ class FeedbackOS {
       cancelToken: cancelToken,
     );
 
-    result.fold(
-      (failure) => throw _mapFailureToException(failure),
-      (_) {
-        _activeExternalUserId = externalUserId;
-      },
-    );
+    result.fold((failure) => throw _mapFailureToException(failure), (_) {
+      _activeExternalUserId = externalUserId;
+    });
   }
 
   /// Disassociates any active external user ID from the device.
@@ -628,8 +637,9 @@ class FeedbackOS {
     }
 
     // Check queue bounds
-    final totalCount =
-        await _submissionStore!.getTotalCount(appScope: _publishableKey!);
+    final totalCount = await _submissionStore!.getTotalCount(
+      appScope: _publishableKey!,
+    );
     if (totalCount >= _options!.maxOfflineQueueSize) {
       throw FeedbackOsStorageException(
         'Offline queue capacity reached (${_options!.maxOfflineQueueSize} items). '
@@ -642,12 +652,14 @@ class FeedbackOS {
     final payloadMap = submissionModel.toJson();
     if (attachments.isNotEmpty) {
       payloadMap['pending_attachments'] = attachments
-          .map((a) => {
-                'file_name': a.fileName,
-                'content_type': a.contentType,
-                'bytes_base64': base64Encode(a.bytes),
-                if (a.localFilePath != null) 'local_file_path': a.localFilePath,
-              })
+          .map(
+            (a) => {
+              'file_name': a.fileName,
+              'content_type': a.contentType,
+              'bytes_base64': base64Encode(a.bytes),
+              if (a.localFilePath != null) 'local_file_path': a.localFilePath,
+            },
+          )
           .toList();
     }
     final now = DateTime.now().toUtc();
@@ -760,7 +772,7 @@ class FeedbackOS {
     return _submissionStore!.getPendingCount(appScope: _publishableKey!);
   }
 
-  /// Displays the interactive FeedbackOS submission dialog.
+  /// Displays the interactive FeedbackOS submission modal bottom sheet.
   ///
   /// Safe to call from any valid [BuildContext].
   /// Adheres to project Golden Rule 6: Bloc is instantiated outside the UI tree
@@ -772,46 +784,53 @@ class FeedbackOS {
     Future<ScreenshotAttachment?> Function()? onPickAttachment,
     FeedbackBloc? customBloc,
     bool shouldShowCategory = true,
+    VoidCallback? onViewMyRequests,
   }) async {
     _ensureInitialized();
 
-    final bloc = customBloc ??
+    final bloc =
+        customBloc ??
         FeedbackBloc(
-          submitHandler: ({
-            required type,
-            required title,
-            required description,
-            category,
-            attachments = const [],
-          }) =>
-              submitFeedback(
-            type: type,
-            title: title,
-            description: description,
-            category: category,
-            attachments: attachments,
-          ),
+          submitHandler:
+              ({
+                required type,
+                required title,
+                required description,
+                category,
+                attachments = const [],
+              }) => submitFeedback(
+                type: type,
+                title: title,
+                description: description,
+                category: category,
+                attachments: attachments,
+              ),
           getConfigUseCase: _getConfigUseCase,
           publishableKey: _publishableKey,
         );
 
-    bloc.add(FeedbackFormStarted(
-      initialType: initialType,
-      initialAttachments: initialAttachments,
-    ));
+    bloc.add(
+      FeedbackFormStarted(
+        initialType: initialType,
+        initialAttachments: initialAttachments,
+      ),
+    );
 
-    return showDialog<FeedbackSubmitResult>(
+    return showModalBottomSheet<FeedbackSubmitResult>(
       context: context,
-      barrierDismissible: true,
-      builder: (dialogContext) {
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
         return FeedbackOSThemeProvider(
           theme: theme,
           child: BlocProvider<FeedbackBloc>.value(
             value: bloc,
-            child: FeedbackFormDialog(
-                initialType: initialType,
-                onPickAttachment: onPickAttachment ?? pickScreenshot,
-                shouldShowCategory: shouldShowCategory),
+            child: FeedbackFormSheet(
+              initialType: initialType,
+              onPickAttachment: onPickAttachment ?? pickScreenshot,
+              shouldShowCategory: shouldShowCategory,
+              onViewMyRequests: onViewMyRequests,
+            ),
           ),
         );
       },
@@ -824,17 +843,60 @@ class FeedbackOS {
   /// without modifying original resolution.
   static Future<ScreenshotAttachment?> pickScreenshot({
     ImagePicker? customPicker,
-  }) =>
-      defaultScreenshotPicker(customPicker: customPicker);
+  }) => defaultScreenshotPicker(customPicker: customPicker);
 
-  /// Opens the [RoadmapView] on a new screen.
+  /// Opens the unified FeedbackOS container screen.
+  ///
+  /// Features a 3-tab segmented navigation bar ('Board' | 'Roadmap' | 'My requests')
+  /// and the floating '+ New request' button.
+  /// Adheres to Golden Rules 6 & 7: Blocs are instantiated outside the UI tree.
+  Future<void> openContainer({
+    required BuildContext context,
+    int initialTabIndex = 0,
+    BoardBloc? customBoardBloc,
+    ThreadsBloc? customThreadsBloc,
+    VoidCallback? onBack,
+    bool replace = false,
+  }) async {
+    _ensureInitialized();
+
+    final boardBloc = customBoardBloc ?? _createBoardBloc();
+    final threadsBloc = customThreadsBloc ?? _createThreadsBloc();
+
+    boardBloc.add(const BoardStarted());
+    boardBloc.add(const RoadmapStarted());
+    threadsBloc.add(const MyItemsStarted());
+
+    final route = MaterialPageRoute<void>(
+      settings: const RouteSettings(name: 'FeedbackOS_Container'),
+      builder: (routeContext) {
+        return FeedbackOSThemeProvider(
+          theme: theme,
+          child: MultiBlocProvider(
+            providers: [
+              BlocProvider<BoardBloc>.value(value: boardBloc),
+              BlocProvider<ThreadsBloc>.value(value: threadsBloc),
+            ],
+            child: FeedbackContainerView(
+              initialTabIndex: initialTabIndex,
+              onBack: onBack ?? () => Navigator.of(routeContext).pop(),
+            ),
+          ),
+        );
+      },
+    );
+
+    if (replace) {
+      await Navigator.of(context, rootNavigator: true).pushReplacement(route);
+    } else {
+      await Navigator.of(context, rootNavigator: true).push(route);
+    }
+  }
+
+  /// Opens the [RoadmapView] on the unified container screen (Tab 1: Roadmap).
   ///
   /// Safe to call from any valid [BuildContext].
-  /// Adheres to project Golden Rule 6 & 7: Bloc is instantiated outside the UI tree
-  /// and injected cleanly via [BlocProvider.value].
-  ///
-  /// When navigating between [RoadmapView] and [BoardView], existing parent routes
-  /// are popped rather than pushed indefinitely to avoid duplicate route buildup.
+  /// Adheres to project Golden Rule 6 & 7.
   Future<void> openRoadmap({
     required BuildContext context,
     BoardBloc? customBloc,
@@ -845,52 +907,19 @@ class FeedbackOS {
     bool isFromBoard = false,
     bool replace = false,
   }) async {
-    _ensureInitialized();
-
-    final bloc = customBloc ?? _createBoardBloc();
-    bloc.add(const RoadmapStarted());
-
-    final route = MaterialPageRoute<void>(
-      settings: const RouteSettings(name: 'FeedbackOS_Roadmap'),
-      builder: (routeContext) {
-        return FeedbackOSThemeProvider(
-          theme: theme,
-          child: BlocProvider<BoardBloc>.value(
-            value: bloc,
-            child: RoadmapView(
-              isFromBoard: isFromBoard,
-              onBack: onBack ?? () => Navigator.of(routeContext).pop(),
-              onOpenDashboard: onOpenDashboard ??
-                  (isFromBoard
-                      ? () => Navigator.of(routeContext).pop()
-                      : () => openBoard(
-                            context: routeContext,
-                            customBloc: bloc,
-                            isFromRoadmap: true,
-                          )),
-              onOpenMyFeedback: onOpenMyFeedback ??
-                  () => openFeedbackDashboard(context: routeContext),
-            ),
-          ),
-        );
-      },
+    return openContainer(
+      context: context,
+      initialTabIndex: 1,
+      customBoardBloc: customBloc,
+      onBack: onBack,
+      replace: replace,
     );
-
-    if (replace) {
-      await Navigator.of(context, rootNavigator: true).pushReplacement(route);
-    } else {
-      await Navigator.of(context, rootNavigator: true).push(route);
-    }
   }
 
-  /// Opens the [BoardView] on a new screen.
+  /// Opens the [BoardView] on the unified container screen (Tab 0: Board).
   ///
   /// Safe to call from any valid [BuildContext].
-  /// Adheres to project Golden Rule 6 & 7: Bloc is instantiated outside the UI tree
-  /// and injected cleanly via [BlocProvider.value].
-  ///
-  /// When navigating between [BoardView] and [RoadmapView], existing parent routes
-  /// are popped rather than pushed indefinitely to avoid duplicate route buildup.
+  /// Adheres to project Golden Rule 6 & 7.
   Future<void> openBoard({
     required BuildContext context,
     BoardBloc? customBloc,
@@ -900,81 +929,32 @@ class FeedbackOS {
     bool isFromRoadmap = false,
     bool replace = false,
   }) async {
-    _ensureInitialized();
-
-    final bloc = customBloc ?? _createBoardBloc();
-    bloc.add(const BoardStarted());
-
-    final route = MaterialPageRoute<void>(
-      settings: const RouteSettings(name: 'FeedbackOS_Board'),
-      builder: (routeContext) {
-        return FeedbackOSThemeProvider(
-          theme: theme,
-          child: BlocProvider<BoardBloc>.value(
-            value: bloc,
-            child: BoardView(
-              isFromRoadmap: isFromRoadmap,
-              onBack: onBack ?? () => Navigator.of(routeContext).pop(),
-              onOpenDashboard: onOpenDashboard ??
-                  () => openFeedbackDashboard(context: routeContext),
-              onOpenRoadmap: onOpenRoadmap ??
-                  (isFromRoadmap
-                      ? () => Navigator.of(routeContext).pop()
-                      : () => openRoadmap(
-                            context: routeContext,
-                            customBloc: bloc,
-                            isFromBoard: true,
-                          )),
-            ),
-          ),
-        );
-      },
+    return openContainer(
+      context: context,
+      initialTabIndex: 0,
+      customBoardBloc: customBloc,
+      onBack: onBack,
+      replace: replace,
     );
-
-    if (replace) {
-      await Navigator.of(context, rootNavigator: true).pushReplacement(route);
-    } else {
-      await Navigator.of(context, rootNavigator: true).push(route);
-    }
   }
 
-  /// Opens the [MyFeedbackListView] on a new screen where users can track
-  /// their submitted feedback requests, statuses, and unread replies.
+  /// Opens the [MyFeedbackListView] on the unified container screen (Tab 2: My requests).
   ///
   /// Safe to call from any valid [BuildContext].
-  /// Adheres to project Golden Rule 6 & 7: Bloc is instantiated outside the UI tree
-  /// and injected cleanly via [BlocProvider.value].
+  /// Adheres to project Golden Rule 6 & 7.
   Future<void> openFeedbackDashboard({
     required BuildContext context,
     ThreadsBloc? customBloc,
     void Function(String itemId)? onItemTap,
     VoidCallback? onBack,
+    bool replace = false,
   }) async {
-    _ensureInitialized();
-
-    final bloc = customBloc ?? _createThreadsBloc();
-    bloc.add(const MyItemsStarted());
-
-    await Navigator.of(context, rootNavigator: true).push(
-      MaterialPageRoute<void>(
-        builder: (routeContext) {
-          return FeedbackOSThemeProvider(
-            theme: theme,
-            child: BlocProvider<ThreadsBloc>.value(
-              value: bloc,
-              child: MyFeedbackListView(
-                onBack: onBack ?? () => Navigator.of(routeContext).pop(),
-                onItemTap: onItemTap ??
-                    (itemId) => openThreadDetail(
-                          context: routeContext,
-                          itemId: itemId,
-                          customBloc: bloc,
-                        ),
-              ),
-            ),
-          );
-        },
-      ),
+    return openContainer(
+      context: context,
+      initialTabIndex: 2,
+      customThreadsBloc: customBloc,
+      onBack: onBack,
+      replace: replace,
     );
   }
 
@@ -984,13 +964,12 @@ class FeedbackOS {
     ThreadsBloc? customBloc,
     void Function(String itemId)? onItemTap,
     VoidCallback? onBack,
-  }) =>
-      openFeedbackDashboard(
-        context: context,
-        customBloc: customBloc,
-        onItemTap: onItemTap,
-        onBack: onBack,
-      );
+  }) => openFeedbackDashboard(
+    context: context,
+    customBloc: customBloc,
+    onItemTap: onItemTap,
+    onBack: onBack,
+  );
 
   /// Opens the [ThreadDetailView] on a new screen for discussion thread replies.
   ///
@@ -1090,52 +1069,52 @@ class FeedbackOS {
   FeedbackOsException _mapFailureToException(Failure failure) {
     return switch (failure) {
       AuthenticationFailure() => FeedbackOsAuthenticationException(
-          failure.message,
-          code: failure.code ?? 'invalid_key',
-          statusCode: failure.statusCode ?? 401,
-        ),
+        failure.message,
+        code: failure.code ?? 'invalid_key',
+        statusCode: failure.statusCode ?? 401,
+      ),
       SubscriptionFailure() => FeedbackOsSubscriptionException(
-          failure.message,
-          code: failure.code ?? 'subscription_required',
-          statusCode: failure.statusCode ?? 402,
-        ),
+        failure.message,
+        code: failure.code ?? 'subscription_required',
+        statusCode: failure.statusCode ?? 402,
+      ),
       ValidationFailure() => FeedbackOsValidationException(
-          failure.message,
-          code: failure.code ?? 'invalid_request',
-          statusCode: failure.statusCode ?? 400,
-        ),
+        failure.message,
+        code: failure.code ?? 'invalid_request',
+        statusCode: failure.statusCode ?? 400,
+      ),
       FeatureDisabledFailure() => FeedbackOsValidationException(
-          failure.message,
-          code: failure.code ?? 'feature_disabled',
-          statusCode: failure.statusCode ?? 403,
-        ),
+        failure.message,
+        code: failure.code ?? 'feature_disabled',
+        statusCode: failure.statusCode ?? 403,
+      ),
       PayloadTooLargeFailure() => FeedbackOsPayloadTooLargeException(
-          failure.message,
-          statusCode: failure.statusCode ?? 413,
-        ),
+        failure.message,
+        statusCode: failure.statusCode ?? 413,
+      ),
       UploadNotFoundFailure() => FeedbackOsUploadNotFoundException(
-          failure.message,
-          statusCode: failure.statusCode ?? 404,
-        ),
+        failure.message,
+        statusCode: failure.statusCode ?? 404,
+      ),
       UploadInvalidFailure() => FeedbackOsUploadInvalidException(
-          failure.message,
-          statusCode: failure.statusCode ?? 422,
-        ),
+        failure.message,
+        statusCode: failure.statusCode ?? 422,
+      ),
       RateLimitFailure() => FeedbackOsRateLimitException(
-          failure.message,
-          statusCode: failure.statusCode ?? 429,
-          retryAfter: failure.retryAfter,
-        ),
+        failure.message,
+        statusCode: failure.statusCode ?? 429,
+        retryAfter: failure.retryAfter,
+      ),
       NetworkFailure() => FeedbackOsNetworkException(
-          failure.message,
-          statusCode: failure.statusCode,
-        ),
+        failure.message,
+        statusCode: failure.statusCode,
+      ),
       StorageFailure() => FeedbackOsStorageException(failure.message),
       ServerFailure() => FeedbackOsServerException(
-          failure.message,
-          code: failure.code ?? 'internal_error',
-          statusCode: failure.statusCode ?? 500,
-        ),
+        failure.message,
+        code: failure.code ?? 'internal_error',
+        statusCode: failure.statusCode ?? 500,
+      ),
       _ => FeedbackOsServerException(failure.message),
     };
   }

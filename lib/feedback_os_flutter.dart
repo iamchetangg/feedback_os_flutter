@@ -29,7 +29,7 @@ export 'src/features/feedback/domain/entities/feedback_submit_result.dart'
 
 // Presentation & State (BLoC)
 export 'src/features/feedback/presentation/feedback_form.dart'
-    show FeedbackFormDialog;
+    show FeedbackFormDialog, FeedbackFormSheet;
 export 'src/features/feedback/state/feedback_bloc.dart'
     show FeedbackBloc, FeedbackSubmitHandler;
 export 'src/features/feedback/state/feedback_event.dart'
@@ -48,6 +48,8 @@ export 'src/features/feedback/state/feedback_state.dart'
     show FeedbackState, FeedbackFormStatus;
 
 // Board Presentation & State (BLoC)
+export 'src/features/board/presentation/feedback_container_view.dart'
+    show FeedbackContainerView;
 export 'src/features/board/presentation/board_view.dart' show BoardView;
 export 'src/features/board/presentation/roadmap_view.dart' show RoadmapView;
 export 'src/features/board/state/board_bloc.dart' show BoardBloc;
