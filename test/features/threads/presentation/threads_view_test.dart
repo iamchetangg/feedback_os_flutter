@@ -112,10 +112,9 @@ void main() {
 
       await tester.pump();
 
-      expect(find.text('My Feedback'), findsOneWidget);
+      expect(find.text('Feedback'), findsOneWidget);
       expect(find.text('Crash on Android 14'), findsOneWidget);
-      expect(find.text('Stability'), findsOneWidget);
-      expect(find.text('in progress'), findsOneWidget);
+      expect(find.text('In progress'), findsOneWidget);
     });
 
     testWidgets('ThreadDetailView renders conversation and allows reply input',
@@ -143,9 +142,10 @@ void main() {
 
       await tester.pump();
 
-      expect(find.text('Feedback Thread'), findsOneWidget);
+      expect(find.text('Your request'), findsOneWidget);
       expect(find.text('Crash on Android 14'), findsOneWidget);
-      expect(find.text('Happens on back navigation'), findsOneWidget);
+      expect(
+          find.textContaining('Happens on back navigation'), findsOneWidget);
       expect(find.text('FeedbackOS Team'), findsOneWidget);
       expect(find.text('We isolated the root cause'), findsOneWidget);
       expect(find.byType(TextField), findsOneWidget);

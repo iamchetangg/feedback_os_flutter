@@ -10,6 +10,9 @@ class MyFeedbackItemModel extends MyFeedbackItem {
     required super.hasUnread,
     super.lastActivityAt,
     required super.createdAt,
+    super.description,
+    super.latestReplyPreview,
+    super.replyCount = 0,
   });
 
   factory MyFeedbackItemModel.fromJson(Map<String, dynamic> json) {
@@ -26,6 +29,12 @@ class MyFeedbackItemModel extends MyFeedbackItem {
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now()
           : DateTime.now(),
+      description: json['description'] as String?,
+      latestReplyPreview: (json['latest_reply'] as String?) ??
+          (json['latest_reply_preview'] as String?),
+      replyCount: (json['reply_count'] as num?)?.toInt() ??
+          (json['replies_count'] as num?)?.toInt() ??
+          0,
     );
   }
 
@@ -40,6 +49,9 @@ class MyFeedbackItemModel extends MyFeedbackItem {
       if (lastActivityAt != null)
         'last_activity_at': lastActivityAt!.toIso8601String(),
       'created_at': createdAt.toIso8601String(),
+      if (description != null) 'description': description,
+      if (latestReplyPreview != null) 'latest_reply': latestReplyPreview,
+      'reply_count': replyCount,
     };
   }
 
@@ -53,6 +65,9 @@ class MyFeedbackItemModel extends MyFeedbackItem {
       hasUnread: entity.hasUnread,
       lastActivityAt: entity.lastActivityAt,
       createdAt: entity.createdAt,
+      description: entity.description,
+      latestReplyPreview: entity.latestReplyPreview,
+      replyCount: entity.replyCount,
     );
   }
 }

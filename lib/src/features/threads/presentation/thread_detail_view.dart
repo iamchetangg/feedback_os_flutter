@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../../core/theme/theme.dart';
 import '../../../../core/theme/styles.dart';
+import '../../../../core/theme/theme.dart';
 import '../domain/entities/thread_detail.dart';
 import '../domain/entities/thread_event.dart';
 import '../domain/entities/thread_reply.dart';
@@ -52,17 +52,17 @@ class _ThreadDetailViewState extends State<ThreadDetailView> {
       backgroundColor: theme.backgroundColor,
       appBar: AppBar(
         title: Text(
-          'Feedback Thread',
-          style: AppStyles.titleMedium.copyWith(color: theme.titleColor),
+          'Your request',
+          style: AppStyles.titleAppBar.copyWith(color: theme.titleColor),
         ),
+        centerTitle: true,
         backgroundColor: theme.surfaceColor,
         elevation: 0.5,
-        leading: widget.onBack != null
-            ? IconButton(
-                icon: Icon(Icons.arrow_back, color: theme.titleColor),
-                onPressed: widget.onBack,
-              )
-            : null,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_ios_new_rounded,
+              color: theme.titleColor, size: 20),
+          onPressed: widget.onBack ?? () => Navigator.of(context).pop(),
+        ),
       ),
       body: BlocConsumer<ThreadsBloc, ThreadsState>(
         listener: (context, state) {
@@ -83,7 +83,7 @@ class _ThreadDetailViewState extends State<ThreadDetailView> {
           if (state.status == ThreadsStatus.loading &&
               state.selectedThread == null) {
             return Center(
-              child: CircularProgressIndicator(color: theme.primaryColor),
+              child: CircularProgressIndicator(color: theme.accentColor),
             );
           }
 
@@ -102,15 +102,15 @@ class _ThreadDetailViewState extends State<ThreadDetailView> {
             children: [
               Expanded(
                 child: ListView(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
                   children: [
-                    _buildHeaderCard(context, detail),
-                    const SizedBox(height: 20),
-                    _buildTimeline(context, detail),
+                    _buildHeaderCard(context, detail, theme),
+                    const SizedBox(height: 14),
+                    _buildTimeline(context, detail, theme),
                   ],
                 ),
               ),
-              _buildReplyBar(context, state.isSendingReply),
+              _buildReplyBar(context, state.isSendingReply, theme),
             ],
           );
         },
@@ -118,98 +118,115 @@ class _ThreadDetailViewState extends State<ThreadDetailView> {
     );
   }
 
-  Widget _buildHeaderCard(BuildContext context, ThreadDetail detail) {
-    final theme = FeedbackOSTheme.of(context);
-
+  Widget _buildHeaderCard(
+    BuildContext context,
+    ThreadDetail detail,
+    FeedbackOSTheme theme,
+  ) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: theme.surfaceColor,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: theme.borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: Text(
                   detail.title,
-                  style:
-                      AppStyles.titleMedium.copyWith(color: theme.titleColor),
+                  style: AppStyles.cardTitle.copyWith(
+                    color: theme.titleColor,
+                    fontSize: 15.5,
+                  ),
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: theme.statusBackgroundColor(detail.status),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 7,
-                      height: 7,
-                      decoration: BoxDecoration(
-                        color: theme.statusColor(detail.status),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      detail.status.replaceAll('_', ' '),
-                      style: AppStyles.labelSmall.copyWith(
-                        color: theme.statusForegroundColor(detail.status),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              const SizedBox(width: 8),
+              _buildStatusChip(context, detail.status, theme),
             ],
           ),
-          if (detail.description.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Text(
-              detail.description,
-              style: AppStyles.bodyMedium.copyWith(color: theme.textColor),
+          const SizedBox(height: 4),
+          Text(
+            '${detail.description} · ${_formatMonthDay(detail.createdAt)}',
+            style: AppStyles.bodySmall.copyWith(
+              color: theme.mutedTextColor,
+              fontSize: 13,
             ),
-          ],
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              if (detail.category != null) ...[
-                Text(
-                  detail.category!,
-                  style: AppStyles.labelSmall
-                      .copyWith(color: theme.mutedTextColor),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  '•',
-                  style: AppStyles.labelSmall
-                      .copyWith(color: theme.mutedTextColor),
-                ),
-                const SizedBox(width: 8),
-              ],
-              Text(
-                '${detail.createdAt.year}-${detail.createdAt.month.toString().padLeft(2, '0')}-${detail.createdAt.day.toString().padLeft(2, '0')}',
-                style:
-                    AppStyles.labelSmall.copyWith(color: theme.mutedTextColor),
-              ),
-            ],
           ),
+          const SizedBox(height: 12),
+          _buildStageStepper(detail.status, theme),
         ],
       ),
     );
   }
 
-  Widget _buildTimeline(BuildContext context, ThreadDetail detail) {
-    final theme = FeedbackOSTheme.of(context);
+  Widget _buildStageStepper(String currentStatus, FeedbackOSTheme theme) {
+    final stages = ['Open', 'Planned', 'In progress', 'Shipped'];
+    final normalized = currentStatus.toLowerCase().replaceAll('-', '_').trim();
 
-    // Collect all timeline items (replies and events) sorted by createdAt
+    final currentIndex = switch (normalized) {
+      'open' || 'under_review' => 0,
+      'planned' => 1,
+      'in_progress' || 'in progress' => 2,
+      'shipped' || 'completed' => 3,
+      _ => 0,
+    };
+
+    return Row(
+      children: List.generate(stages.length, (index) {
+        final isReached = index <= currentIndex;
+        final isCurrent = index == currentIndex;
+
+        return Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: index == 0 ? 0 : 2,
+              right: index == stages.length - 1 ? 0 : 2,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: isReached
+                        ? theme.statusPlannedColor
+                        : theme.borderMutedColor,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  stages[index],
+                  style: (isCurrent
+                          ? AppStyles.stepperLabelActive
+                          : AppStyles.stepperLabel)
+                      .copyWith(
+                    color: isCurrent
+                        ? theme.statusPlannedColor
+                        : isReached
+                            ? theme.mutedTextColor
+                            : theme.placeholderColor,
+                    fontSize: 10.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }),
+    );
+  }
+
+  Widget _buildTimeline(
+    BuildContext context,
+    ThreadDetail detail,
+    FeedbackOSTheme theme,
+  ) {
     final items = <_TimelineItem>[
       ...detail.replies.map((r) => _TimelineItem.reply(r)),
       ...detail.events.map((e) => _TimelineItem.event(e)),
@@ -220,8 +237,8 @@ class _ThreadDetailViewState extends State<ThreadDetailView> {
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 24),
           child: Text(
-            'No replies yet. Send a message below to start the conversation.',
-            style: AppStyles.bodySmall.copyWith(color: theme.mutedTextColor),
+            'No replies yet.',
+            style: AppStyles.bodySmall.copyWith(color: theme.placeholderColor),
           ),
         ),
       );
@@ -230,136 +247,233 @@ class _ThreadDetailViewState extends State<ThreadDetailView> {
     return Column(
       children: items.map((item) {
         if (item.isEvent) {
-          return _buildEventTile(context, item.event!);
+          return _buildEventTile(context, item.event!, theme);
         } else {
-          return _buildReplyBubble(context, item.reply!);
+          return _buildReplyBubble(context, item.reply!, theme);
         }
       }).toList(),
     );
   }
 
-  Widget _buildEventTile(BuildContext context, ThreadEvent event) {
-    final theme = FeedbackOSTheme.of(context);
-
-    if (event.newStatus != null) {
-      final status = event.newStatus!;
-      final dotColor = theme.statusColor(status);
-      final fg = theme.statusForegroundColor(status);
-      final bg = theme.statusBackgroundColor(status);
-
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Center(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: bg,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: dotColor,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  'Status updated to: ${status.replaceAll('_', ' ')}',
-                  style: AppStyles.labelSmall.copyWith(
-                    color: fg,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
+  Widget _buildEventTile(
+    BuildContext context,
+    ThreadEvent event,
+    FeedbackOSTheme theme,
+  ) {
+    final status = event.newStatus ?? event.type;
+    final formattedStatus = _formatStatusLabel(status);
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Center(
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           decoration: BoxDecoration(
-            color: theme.secondaryBackgroundColor,
+            color: theme.statusBackgroundColor('planned'),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
-            'Timeline update: ${event.type}',
-            style:
-                AppStyles.labelSmall.copyWith(color: theme.secondaryTextColor),
+            'Status changed to $formattedStatus',
+            style: AppStyles.meta.copyWith(
+              color: theme.statusPlannedColor,
+              fontWeight: FontWeight.w500,
+              fontSize: 11.5,
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildReplyBubble(BuildContext context, ThreadReply reply) {
-    final theme = FeedbackOSTheme.of(context);
+  Widget _buildReplyBubble(
+    BuildContext context,
+    ThreadReply reply,
+    FeedbackOSTheme theme,
+  ) {
     final isAdmin = reply.isAdmin;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Align(
+        alignment: isAdmin ? Alignment.centerLeft : Alignment.centerRight,
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 260),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+          decoration: BoxDecoration(
+            color: isAdmin ? theme.cardSecondaryColor : theme.accentColor,
+            borderRadius: BorderRadius.only(
+              topLeft: const Radius.circular(16),
+              topRight: const Radius.circular(16),
+              bottomLeft: Radius.circular(isAdmin ? 5 : 16),
+              bottomRight: Radius.circular(isAdmin ? 16 : 5),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    isAdmin
+                        ? (reply.authorName != null &&
+                                reply.authorName!.trim().isNotEmpty
+                            ? reply.authorName!.trim()
+                            : 'FeedbackOS Team')
+                        : 'You',
+                    style: AppStyles.meta.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: isAdmin ? theme.accentColor : theme.accentOnColor,
+                      fontSize: 11.5,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${reply.createdAt.hour.toString().padLeft(2, '0')}:${reply.createdAt.minute.toString().padLeft(2, '0')}',
+                    style: AppStyles.meta.copyWith(
+                      color: isAdmin
+                          ? theme.placeholderColor
+                          : theme.accentOnColor.withAlpha(160),
+                      fontSize: 10.5,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 3),
+              Text(
+                reply.body,
+                style: AppStyles.bodyMedium.copyWith(
+                  color: isAdmin ? theme.textColor : theme.accentOnColor,
+                  fontSize: 14,
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReplyBar(
+    BuildContext context,
+    bool isSending,
+    FeedbackOSTheme theme,
+  ) {
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+        14,
+        10,
+        14,
+        10 + MediaQuery.of(context).viewInsets.bottom,
+      ),
+      decoration: BoxDecoration(
+        color: theme.backgroundColor,
+        border: Border(top: BorderSide(color: theme.borderColor)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Row(
+          children: [
+            Expanded(
+              child: SizedBox(
+                height: 42,
+                child: TextField(
+                  controller: _replyController,
+                  style:
+                      AppStyles.bodyMedium.copyWith(color: theme.textColor),
+                  decoration: InputDecoration(
+                    hintText: 'Reply to the team',
+                    hintStyle: AppStyles.bodyMedium
+                        .copyWith(color: theme.placeholderColor),
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 16),
+                    filled: true,
+                    fillColor: theme.surfaceColor,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(21),
+                      borderSide: BorderSide(color: theme.borderMutedColor),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(21),
+                      borderSide: BorderSide(color: theme.borderMutedColor),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(21),
+                      borderSide: BorderSide(color: theme.accentColor),
+                    ),
+                  ),
+                  onSubmitted: (_) => _sendReply(),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: isSending ? null : _sendReply,
+              child: Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: theme.accentColor,
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: isSending
+                    ? SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: theme.accentOnColor,
+                        ),
+                      )
+                    : Icon(
+                        Icons.arrow_forward_rounded,
+                        color: theme.accentOnColor,
+                        size: 20,
+                      ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusChip(
+    BuildContext context,
+    String status,
+    FeedbackOSTheme theme,
+  ) {
+    final bg = theme.statusBackgroundColor(status);
+    final fg = theme.statusForegroundColor(status);
+    final dotColor = theme.statusColor(status);
+
+    return Container(
+      height: 20,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(10),
+      ),
       child: Row(
-        mainAxisAlignment:
-            isAdmin ? MainAxisAlignment.start : MainAxisAlignment.end,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            constraints: const BoxConstraints(maxWidth: 300),
-            padding: const EdgeInsets.all(12),
+            width: 6,
+            height: 6,
             decoration: BoxDecoration(
-              color:
-                  isAdmin ? theme.secondaryBackgroundColor : theme.primaryColor,
-              borderRadius: BorderRadius.circular(12),
-              // border: Border.all(
-              //   color:
-              //       isAdmin ? theme.primaryLightBorderColor : theme.borderColor,
-              // ),
+              color: dotColor,
+              shape: BoxShape.circle,
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      isAdmin
-                          ? (reply.authorName != null &&
-                                  reply.authorName!.trim().isNotEmpty
-                              ? reply.authorName!.trim()
-                              : 'FeedbackOS Team')
-                          : 'You',
-                      style: AppStyles.labelSmall.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color:
-                            isAdmin ? theme.primaryColor : theme.surfaceColor,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${reply.createdAt.hour.toString().padLeft(2, '0')}:${reply.createdAt.minute.toString().padLeft(2, '0')}',
-                      style: AppStyles.labelSmall.copyWith(
-                          fontSize: 10,
-                          color: isAdmin
-                              ? theme.mutedTextColor
-                              : theme.surfaceColor),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  reply.body,
-                  style: AppStyles.bodyMedium.copyWith(
-                      color: isAdmin ? theme.textColor : theme.surfaceColor),
-                ),
-              ],
+          ),
+          const SizedBox(width: 5),
+          Text(
+            _formatStatusLabel(status),
+            style: AppStyles.pillLabel.copyWith(
+              color: fg,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
@@ -367,63 +481,34 @@ class _ThreadDetailViewState extends State<ThreadDetailView> {
     );
   }
 
-  Widget _buildReplyBar(BuildContext context, bool isSending) {
-    final theme = FeedbackOSTheme.of(context);
+  String _formatStatusLabel(String status) {
+    final normalized = status.toLowerCase().replaceAll('-', '_').trim();
+    return switch (normalized) {
+      'in_progress' || 'in progress' => 'In progress',
+      'planned' => 'Planned',
+      'shipped' || 'completed' => 'Shipped',
+      'open' || 'under_review' => 'Open',
+      'closed' || 'declined' => 'Closed',
+      _ => status.replaceAll('_', ' '),
+    };
+  }
 
-    return Container(
-      color: theme.surfaceColor,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: SafeArea(
-        top: false,
-        child: Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _replyController,
-                style: AppStyles.bodyMedium.copyWith(color: theme.textColor),
-                decoration: InputDecoration(
-                  hintText: 'Type your reply...',
-                  hintStyle: AppStyles.bodyMedium
-                      .copyWith(color: theme.placeholderColor),
-                  filled: true,
-                  fillColor: theme.backgroundColor,
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(20),
-                    borderSide: BorderSide(color: theme.borderColor),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(20),
-                    borderSide: BorderSide(color: theme.borderColor),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(20),
-                    borderSide: BorderSide(color: theme.primaryColor),
-                  ),
-                ),
-                textInputAction: TextInputAction.send,
-                onSubmitted: (_) => _sendReply(),
-              ),
-            ),
-            const SizedBox(width: 8),
-            IconButton(
-              icon: isSending
-                  ? SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: theme.primaryColor,
-                      ),
-                    )
-                  : Icon(Icons.send, color: theme.primaryColor),
-              onPressed: isSending ? null : _sendReply,
-            ),
-          ],
-        ),
-      ),
-    );
+  String _formatMonthDay(DateTime dt) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${months[dt.month - 1]} ${dt.day}';
   }
 }
 
@@ -431,14 +516,15 @@ class _TimelineItem {
   final ThreadReply? reply;
   final ThreadEvent? event;
   final DateTime createdAt;
+  final bool isEvent;
 
   _TimelineItem.reply(this.reply)
       : event = null,
-        createdAt = reply!.createdAt;
+        createdAt = reply!.createdAt,
+        isEvent = false;
 
   _TimelineItem.event(this.event)
       : reply = null,
-        createdAt = event!.createdAt;
-
-  bool get isEvent => event != null;
+        createdAt = event!.createdAt,
+        isEvent = true;
 }

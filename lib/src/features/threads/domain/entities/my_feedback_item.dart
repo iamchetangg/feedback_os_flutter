@@ -10,6 +10,9 @@ class MyFeedbackItem extends Equatable {
   final bool hasUnread;
   final DateTime? lastActivityAt;
   final DateTime createdAt;
+  final String? description;
+  final String? latestReplyPreview;
+  final int replyCount;
 
   const MyFeedbackItem({
     required this.id,
@@ -20,6 +23,9 @@ class MyFeedbackItem extends Equatable {
     required this.hasUnread,
     this.lastActivityAt,
     required this.createdAt,
+    this.description,
+    this.latestReplyPreview,
+    this.replyCount = 0,
   });
 
   @override
@@ -32,5 +38,8 @@ class MyFeedbackItem extends Equatable {
         hasUnread,
         lastActivityAt,
         createdAt,
+        description,
+        latestReplyPreview,
+        replyCount,
       ];
 }
