@@ -166,6 +166,7 @@ class FeedbackOS {
   String? get publishableKey => _publishableKey;
 
   /// The currently identified external user ID, if any.
+  @visibleForTesting
   String? get activeExternalUserId => _activeExternalUserId;
 
   /// Initializes the FeedbackOS SDK.
@@ -746,12 +747,14 @@ class FeedbackOS {
   /// Triggers an immediate transmission attempt for all due queued feedback items.
   ///
   /// Returns the number of feedback items successfully delivered.
+  @visibleForTesting
   Future<int> flushQueue() async {
     _ensureInitialized();
     return _queueSyncEngine!.flushQueue();
   }
 
   /// Returns the number of items currently pending or awaiting retry in the queue.
+  @visibleForTesting
   Future<int> getQueuedCount() async {
     _ensureInitialized();
     return _submissionStore!.getPendingCount(appScope: _publishableKey!);
