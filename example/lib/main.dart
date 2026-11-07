@@ -11,7 +11,8 @@ Future<void> main() async {
   await FeedbackOS.instance.initialize(
     publishableKey: const String.fromEnvironment(
       'FEEDBACKOS_KEY',
-      defaultValue: 'fos_pk_dddddddddddddddddddddddddddddddddddddddddddddddd',
+      // defaultValue: 'fos_pk_dc8eb47a0c75553b252be91cc3db7b8972dd50267a1d1b6c',
+      defaultValue: "fos_pk_81564341fd1cfcb1ee91dbcd4245bfe34e792d75913f0d1c",
     ),
     options: FeedbackOSOptions.staging(debugLogging: true),
   );
