@@ -131,6 +131,36 @@ void main() {
           equals(theme.secondaryTextColor.withAlpha(35)));
     });
 
+    test(
+        'status getters and methods safely fallback to defaults when properties are null',
+        () {
+      const theme = FeedbackOSTheme(
+        statusOpenColor: null,
+        statusPlannedColor: null,
+        statusInProgressColor: null,
+        statusShippedColor: null,
+        statusClosedColor: null,
+      );
+
+      expect(theme.statusPlannedColor,
+          equals(FeedbackOSTheme.defaultStatusPlannedColor));
+      expect(theme.statusOpenColor,
+          equals(FeedbackOSTheme.defaultStatusOpenColor));
+      expect(theme.statusInProgressColor,
+          equals(FeedbackOSTheme.defaultStatusInProgressColor));
+      expect(theme.statusShippedColor,
+          equals(FeedbackOSTheme.defaultStatusShippedColor));
+      expect(theme.statusClosedColor,
+          equals(FeedbackOSTheme.defaultStatusClosedColor));
+
+      expect(theme.statusColor('planned'),
+          equals(FeedbackOSTheme.defaultStatusPlannedColor));
+      expect(theme.statusBackgroundColor('planned'),
+          equals(FeedbackOSTheme.defaultStatusPlannedColor.withAlpha(35)));
+      expect(theme.statusForegroundColor('planned'),
+          equals(FeedbackOSTheme.defaultStatusPlannedColor));
+    });
+
     test('copyWith updates specified fields', () {
       const theme = FeedbackOSTheme();
       final updated = theme.copyWith(primaryColor: Colors.cyan);

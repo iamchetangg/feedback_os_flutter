@@ -32,6 +32,11 @@ class FeedbackOSTheme extends Equatable {
   static const Color defaultInfoBackgroundColor = Color(0xFFDBEAFE);
   static const Color defaultButtonColor = Color(0xFF2563EB);
   static const Color defaultDisabledButtonColor = Color(0xFF93C5FD);
+  static const Color defaultStatusOpenColor = Color(0xFF8A8F98);
+  static const Color defaultStatusPlannedColor = Color(0xFF4DA7FC);
+  static const Color defaultStatusInProgressColor = Color(0xFFF1CA4B);
+  static const Color defaultStatusShippedColor = Color(0xFF26A644);
+  static const Color defaultStatusClosedColor = Color(0xFF62666D);
 
   /// Primary accent/brand color.
   final Color primaryColor;
@@ -109,19 +114,28 @@ class FeedbackOSTheme extends Equatable {
   final Color disabledButtonColor;
 
   /// Status color for 'open' (default: #8A8F98).
-  final Color statusOpenColor;
+  final Color? _statusOpenColor;
+  Color get statusOpenColor => _statusOpenColor ?? defaultStatusOpenColor;
 
   /// Status color for 'planned' (default: #4DA7FC).
-  final Color statusPlannedColor;
+  final Color? _statusPlannedColor;
+  Color get statusPlannedColor =>
+      _statusPlannedColor ?? defaultStatusPlannedColor;
 
   /// Status color for 'in_progress' (default: #F1CA4B).
-  final Color statusInProgressColor;
+  final Color? _statusInProgressColor;
+  Color get statusInProgressColor =>
+      _statusInProgressColor ?? defaultStatusInProgressColor;
 
   /// Status color for 'shipped' (default: #26A644).
-  final Color statusShippedColor;
+  final Color? _statusShippedColor;
+  Color get statusShippedColor =>
+      _statusShippedColor ?? defaultStatusShippedColor;
 
   /// Status color for 'closed' (default: #62666D).
-  final Color statusClosedColor;
+  final Color? _statusClosedColor;
+  Color get statusClosedColor =>
+      _statusClosedColor ?? defaultStatusClosedColor;
 
   const FeedbackOSTheme({
     Color? primaryColor,
@@ -184,12 +198,12 @@ class FeedbackOSTheme extends Equatable {
         infoBackgroundColor = infoBackgroundColor ?? defaultInfoBackgroundColor,
         buttonColor = buttonColor ?? primaryColor ?? defaultButtonColor,
         disabledButtonColor = disabledButtonColor ?? defaultDisabledButtonColor,
-        statusOpenColor = statusOpenColor ?? const Color(0xFF8A8F98),
-        statusPlannedColor = statusPlannedColor ?? const Color(0xFF4DA7FC),
-        statusInProgressColor =
-            statusInProgressColor ?? const Color(0xFFF1CA4B),
-        statusShippedColor = statusShippedColor ?? const Color(0xFF26A644),
-        statusClosedColor = statusClosedColor ?? const Color(0xFF62666D);
+        _statusOpenColor = statusOpenColor ?? defaultStatusOpenColor,
+        _statusPlannedColor = statusPlannedColor ?? defaultStatusPlannedColor,
+        _statusInProgressColor =
+            statusInProgressColor ?? defaultStatusInProgressColor,
+        _statusShippedColor = statusShippedColor ?? defaultStatusShippedColor,
+        _statusClosedColor = statusClosedColor ?? defaultStatusClosedColor;
 
   /// Predefined light theme matching default styling.
   factory FeedbackOSTheme.light() => const FeedbackOSTheme();
