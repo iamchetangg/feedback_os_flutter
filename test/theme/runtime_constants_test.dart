@@ -80,9 +80,10 @@ void main() {
 
     test('predefined dark factory sets dark palette', () {
       final dark = FeedbackOSTheme.dark();
-      expect(dark.backgroundColor, equals(const Color(0xFF111827)));
-      expect(dark.surfaceColor, equals(const Color(0xFF1F2937)));
-      expect(dark.titleColor, equals(const Color(0xFFF9FAFB)));
+      expect(dark.backgroundColor, equals(const Color(0xFF161B24)));
+      expect(dark.surfaceColor, equals(const Color(0xFF1D2430)));
+      expect(dark.titleColor, equals(const Color(0xFFE9ECF1)));
+      expect(dark.accentColor, equals(const Color(0xFF3ECF8E)));
     });
 
     test('fromTheme factory extracts colors from Flutter ThemeData', () {

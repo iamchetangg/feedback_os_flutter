@@ -15,9 +15,33 @@ abstract final class AppStyles {
     color: Color(0xFF111827),
   );
 
+  static const TextStyle titleHeader = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 18,
+    fontWeight: FontWeight.w600,
+    letterSpacing: -0.1,
+    color: Color(0xFF1F2937),
+  );
+
+  static const TextStyle titleAppBar = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 16.5,
+    fontWeight: FontWeight.w600,
+    letterSpacing: -0.1,
+    color: Color(0xFF1F2937),
+  );
+
   static const TextStyle titleMedium = TextStyle(
     fontFamily: fontFamily,
     fontSize: 16,
+    fontWeight: FontWeight.w600,
+    letterSpacing: -0.1,
+    color: Color(0xFF1F2937),
+  );
+
+  static const TextStyle cardTitle = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 14.5,
     fontWeight: FontWeight.w600,
     letterSpacing: -0.1,
     color: Color(0xFF1F2937),
@@ -53,12 +77,41 @@ abstract final class AppStyles {
   );
 
   // Labels & Buttons
+  static const TextStyle buttonPrimary = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 15.5,
+    fontWeight: FontWeight.w600,
+    letterSpacing: 0.1,
+    color: Colors.white,
+  );
+
   static const TextStyle labelLarge = TextStyle(
     fontFamily: fontFamily,
     fontSize: 14,
     fontWeight: FontWeight.w600,
     letterSpacing: 0.1,
     color: Colors.white,
+  );
+
+  static const TextStyle tabLabel = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 13,
+    fontWeight: FontWeight.w500,
+    color: Color(0xFF4B5563),
+  );
+
+  static const TextStyle tabLabelSelected = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 13,
+    fontWeight: FontWeight.w600,
+    color: Color(0xFF1F2937),
+  );
+
+  static const TextStyle chipLabel = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 13,
+    fontWeight: FontWeight.w500,
+    color: Color(0xFF4B5563),
   );
 
   static const TextStyle labelMedium = TextStyle(
@@ -68,11 +121,39 @@ abstract final class AppStyles {
     color: Color(0xFF4B5563),
   );
 
+  static const TextStyle meta = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 11.5,
+    fontWeight: FontWeight.w500,
+    color: Color(0xFF6B7280),
+  );
+
+  static const TextStyle pillLabel = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 11,
+    fontWeight: FontWeight.w600,
+    color: Color(0xFF9CA3AF),
+  );
+
   static const TextStyle labelSmall = TextStyle(
     fontFamily: fontFamily,
     fontSize: 11,
     fontWeight: FontWeight.w500,
     color: Color(0xFF9CA3AF),
+  );
+
+  static const TextStyle stepperLabel = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 10.5,
+    fontWeight: FontWeight.w500,
+    color: Color(0xFF6B7280),
+  );
+
+  static const TextStyle stepperLabelActive = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 10.5,
+    fontWeight: FontWeight.w600,
+    color: Color(0xFF1D4ED8),
   );
 
   // Error & Helper

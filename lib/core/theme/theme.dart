@@ -208,36 +208,53 @@ class FeedbackOSTheme extends Equatable {
   /// Predefined light theme matching default styling.
   factory FeedbackOSTheme.light() => const FeedbackOSTheme();
 
-  /// Predefined dark theme for dark mode applications.
+  /// Predefined dark theme for dark mode applications matching FeedbackOS in-app specs.
   factory FeedbackOSTheme.dark() {
     return const FeedbackOSTheme(
-      primaryColor: Color(0xFF6366F1),
-      primaryLightColor: Color(0xFF312E81),
-      primaryDarkColor: Color(0xFFC7D2FE),
-      primaryLightBorderColor: Color(0xFF4338CA),
-      onPrimaryColor: Colors.white,
-      backgroundColor: Color(0xFF111827),
-      surfaceColor: Color(0xFF1F2937),
-      secondaryBackgroundColor: Color(0xFF374151),
-      borderColor: Color(0xFF374151),
-      borderMutedColor: Color(0xFF4B5563),
-      titleColor: Color(0xFFF9FAFB),
-      textColor: Color(0xFFE5E7EB),
-      secondaryTextColor: Color(0xFFD1D5DB),
-      mutedTextColor: Color(0xFF9CA3AF),
-      placeholderColor: Color(0xFF6B7280),
+      primaryColor: Color(0xFF3ECF8E),
+      primaryLightColor: Color(0x213ECF8E),
+      primaryDarkColor: Color(0xFF2E9E6C),
+      primaryLightBorderColor: Color(0xFF3ECF8E),
+      onPrimaryColor: Color(0xFF06170E),
+      backgroundColor: Color(0xFF161B24),
+      surfaceColor: Color(0xFF1D2430),
+      secondaryBackgroundColor: Color(0xFF232B39),
+      borderColor: Color(0xFF2A3241),
+      borderMutedColor: Color(0xFF364052),
+      titleColor: Color(0xFFE9ECF1),
+      textColor: Color(0xFFE9ECF1),
+      secondaryTextColor: Color(0xFF8C95A5),
+      mutedTextColor: Color(0xFF5E6778),
+      placeholderColor: Color(0xFF5E6778),
       errorColor: Color(0xFFEF4444),
       errorBackgroundColor: Color(0xFF450A0A),
-      successColor: Color(0xFF22C55E),
-      successBackgroundColor: Color(0xFF052E16),
-      warningColor: Color(0xFFF59E0B),
-      warningBackgroundColor: Color(0xFF451A03),
-      infoColor: Color(0xFF3B82F6),
-      infoBackgroundColor: Color(0xFF1E3A8A),
-      buttonColor: Color(0xFF4F46E5),
-      disabledButtonColor: Color(0xFF3730A3),
+      successColor: Color(0xFF3ECF8E),
+      successBackgroundColor: Color(0x213ECF8E),
+      warningColor: Color(0xFFF1B54A),
+      warningBackgroundColor: Color(0x24F1B54A),
+      infoColor: Color(0xFF5AA2FF),
+      infoBackgroundColor: Color(0x245AA2FF),
+      buttonColor: Color(0xFF3ECF8E),
+      disabledButtonColor: Color(0xFF2A3241),
+      statusOpenColor: Color(0xFF8C95A5),
+      statusPlannedColor: Color(0xFF5AA2FF),
+      statusInProgressColor: Color(0xFFF1CA4B),
+      statusShippedColor: Color(0xFF3ECF8E),
+      statusClosedColor: Color(0xFF62666D),
     );
   }
+
+  /// Accent brand color (e.g. mint green).
+  Color get accentColor => primaryColor;
+
+  /// Soft accent background for active chips and badges.
+  Color get accentSoftColor => primaryLightColor;
+
+  /// Foreground color on accent background.
+  Color get accentOnColor => onPrimaryColor;
+
+  /// Secondary card surface color.
+  Color get cardSecondaryColor => secondaryBackgroundColor;
 
   /// Derives theme colors from Flutter's standard [ThemeData].
   factory FeedbackOSTheme.fromTheme(ThemeData theme) {
