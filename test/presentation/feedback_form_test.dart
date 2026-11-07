@@ -39,8 +39,8 @@ void main() {
       await tester.pumpWidget(buildTestableWidget(bloc));
       await tester.pumpAndSettle();
 
-      expect(find.text('Send Feedback'), findsOneWidget); // Header title
-      expect(find.text('Send'), findsOneWidget); // Submit button text
+      expect(find.text('New request'), findsOneWidget); // Header title
+      expect(find.text('Send report'), findsOneWidget); // Submit button text
       expect(find.byKey(const Key('feedback_type_bug')), findsOneWidget);
       expect(find.byKey(const Key('feedback_type_feature')), findsOneWidget);
       expect(find.byKey(const Key('feedback_title_field')), findsOneWidget);
@@ -118,7 +118,7 @@ void main() {
       await tester.tap(find.byKey(const Key('feedback_submit_button')));
       await tester.pumpAndSettle();
 
-      expect(find.text('Thank You!'), findsOneWidget);
+      expect(find.text('Thanks, we got it'), findsOneWidget);
       expect(find.byKey(const Key('feedback_success_done_button')),
           findsOneWidget);
     });
@@ -189,7 +189,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(bloc.state.attachments.length, 1);
-      expect(find.text('1/3'), findsOneWidget);
+      expect(find.text('1 of 3'), findsOneWidget);
       expect(find.byKey(const Key('feedback_remove_attachment_0')),
           findsOneWidget);
 
@@ -198,7 +198,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(bloc.state.attachments.length, 0);
-      expect(find.text('0/3'), findsOneWidget);
+      expect(find.text('0 of 3'), findsOneWidget);
     });
 
     testWidgets(
@@ -280,7 +280,7 @@ void main() {
       expect(bloc.state.attachments.length, 1);
       expect(bloc.state.attachments.first.byteSize,
           lessThanOrEqualTo(256 * 1024));
-      expect(find.text('1/3'), findsOneWidget);
+      expect(find.text('1 of 3'), findsOneWidget);
 
       // User enters title
       await tester.enterText(
@@ -307,7 +307,7 @@ void main() {
       expect(submittedUploadIds, equals(['upload_ref_789']));
 
       // Thank You success view is displayed
-      expect(find.text('Thank You!'), findsOneWidget);
+      expect(find.text('Thanks, we got it'), findsOneWidget);
     });
   });
 }

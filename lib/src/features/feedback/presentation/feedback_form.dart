@@ -11,12 +11,176 @@ import '../state/feedback_bloc.dart';
 import '../state/feedback_event.dart';
 import '../state/feedback_state.dart';
 
-/// Modal dialog providing the user interface for submitting feedback.
+/// Interactive modal sheet providing the new in-app UI for submitting feedback.
+class FeedbackFormSheet extends StatelessWidget {
+  final VoidCallback? onDismiss;
+  final Future<ScreenshotAttachment?> Function()? onPickAttachment;
+  final bool shouldShowCategory;
+  final FeedbackType initialType;
+  final VoidCallback? onViewMyRequests;
+
+  const FeedbackFormSheet({
+    super.key,
+    this.onDismiss,
+    this.onPickAttachment,
+    this.initialType = FeedbackType.bug,
+    this.shouldShowCategory = true,
+    this.onViewMyRequests,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = FeedbackOSTheme.of(context);
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.backgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      padding: EdgeInsets.only(bottom: bottomInset),
+      child: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: BlocConsumer<FeedbackBloc, FeedbackState>(
+              listener: (context, state) {},
+              builder: (context, state) {
+                if (state.isSuccess) {
+                  return _SuccessView(
+                    result: state.submissionResult,
+                    state: state,
+                    onClose: () {
+                      onDismiss?.call();
+                      Navigator.of(context, rootNavigator: true)
+                          .pop(state.submissionResult);
+                    },
+                    onViewMyRequests: () {
+                      Navigator.of(context, rootNavigator: true)
+                          .pop(state.submissionResult);
+                      onViewMyRequests?.call();
+                    },
+                  );
+                }
+
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Top drag grab handle
+                    Center(
+                      child: Container(
+                        width: 36,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: theme.borderMutedColor,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Header row: New request & Close X
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'New request',
+                            style: AppStyles.titleHeader
+                                .copyWith(color: theme.titleColor),
+                          ),
+                        ),
+                        IconButton(
+                          key: const Key('feedback_close_button'),
+                          icon: Icon(Icons.close, color: theme.secondaryTextColor),
+                          onPressed: () {
+                            onDismiss?.call();
+                            Navigator.of(context, rootNavigator: true).pop();
+                          },
+                          splashRadius: 20,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Section 1: What's this about?
+                    if (shouldShowCategory) ...[
+                      Text(
+                        "What's this about?",
+                        style: AppStyles.labelMedium
+                            .copyWith(color: theme.secondaryTextColor),
+                      ),
+                      const SizedBox(height: 8),
+                      const _TypeCards(),
+                      const SizedBox(height: 16),
+                    ],
+
+                    // Section 2: Title
+                    Text(
+                      'Title',
+                      style: AppStyles.labelMedium
+                          .copyWith(color: theme.secondaryTextColor),
+                    ),
+                    const SizedBox(height: 6),
+                    const _TitleField(),
+                    const SizedBox(height: 16),
+
+                    // Section 3: Details (Optional)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Details',
+                          style: AppStyles.labelMedium
+                              .copyWith(color: theme.secondaryTextColor),
+                        ),
+                        Text(
+                          'Optional',
+                          style: AppStyles.bodySmall
+                              .copyWith(color: theme.mutedTextColor),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    const _DescriptionField(),
+                    const SizedBox(height: 16),
+
+                    // Section 4: Screenshots
+                    _ScreenshotAttachmentsSection(
+                      onPickAttachment: onPickAttachment,
+                    ),
+
+                    if (state.errorMessage != null) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        state.errorMessage!,
+                        style:
+                            AppStyles.error.copyWith(color: theme.errorColor),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+
+                    const SizedBox(height: 24),
+                    const _SubmitButton(),
+                  ],
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Backward compatibility wrapper for [FeedbackFormSheet].
 class FeedbackFormDialog extends StatelessWidget {
   final VoidCallback? onDismiss;
   final Future<ScreenshotAttachment?> Function()? onPickAttachment;
   final bool shouldShowCategory;
   final FeedbackType initialType;
+  final VoidCallback? onViewMyRequests;
 
   const FeedbackFormDialog({
     super.key,
@@ -24,166 +188,72 @@ class FeedbackFormDialog extends StatelessWidget {
     this.onPickAttachment,
     this.initialType = FeedbackType.bug,
     this.shouldShowCategory = true,
+    this.onViewMyRequests,
   });
 
   @override
   Widget build(BuildContext context) {
-    final theme = FeedbackOSTheme.of(context);
-
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      backgroundColor: theme.onPrimaryColor,
-      clipBehavior: Clip.antiAlias,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 480),
-        child: BlocConsumer<FeedbackBloc, FeedbackState>(
-          listener: (context, state) {
-            // Dismiss or notify if needed
-          },
-          builder: (context, state) {
-            if (state.isSuccess) {
-              return _SuccessView(
-                result: state.submissionResult,
-                onClose: () {
-                  onDismiss?.call();
-                  Navigator.of(context, rootNavigator: true)
-                      .pop(state.submissionResult);
-                },
-              );
-            }
-
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _Header(
-                      onClose: () {
-                        onDismiss?.call();
-                        Navigator.of(context, rootNavigator: true).pop();
-                      },
-                      initialType: initialType),
-                  const SizedBox(height: 20),
-                  if (shouldShowCategory) const _TypeSelector(),
-                  const SizedBox(height: 16),
-                  if (state.availableCategories.isNotEmpty) ...[
-                    const _CategoryDropdown(),
-                    const SizedBox(height: 16),
-                  ],
-                  const _TitleField(),
-                  const SizedBox(height: 16),
-                  const _DescriptionField(),
-                  const SizedBox(height: 16),
-                  _ScreenshotAttachmentsSection(
-                    onPickAttachment: onPickAttachment,
-                  ),
-                  if (state.errorMessage != null) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      state.errorMessage!,
-                      style: AppStyles.error.copyWith(color: theme.errorColor),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                  const SizedBox(height: 24),
-                  _SubmitButton(initialType: initialType),
-                ],
-              ),
-            );
-          },
-        ),
-      ),
+    return FeedbackFormSheet(
+      onDismiss: onDismiss,
+      onPickAttachment: onPickAttachment,
+      initialType: initialType,
+      shouldShowCategory: shouldShowCategory,
+      onViewMyRequests: onViewMyRequests,
     );
   }
 }
 
-class _Header extends StatelessWidget {
-  final VoidCallback onClose;
-  final FeedbackType initialType;
-  const _Header({required this.onClose, this.initialType = FeedbackType.bug});
+class _TypeCards extends StatelessWidget {
+  const _TypeCards();
 
   @override
   Widget build(BuildContext context) {
-    final theme = FeedbackOSTheme.of(context);
+    final currentType = context.select((FeedbackBloc b) => b.state.type);
+
+    final isBug = currentType == FeedbackType.bug;
+    final isIdea = currentType == FeedbackType.feature;
+
     return Row(
       children: [
         Expanded(
-          child: Text(
-            initialType == FeedbackType.bug
-                ? 'Send Feedback'
-                : "Request a Feature",
-            style: AppStyles.titleLarge.copyWith(color: theme.titleColor),
+          child: _TypeCard(
+            key: const Key('feedback_type_bug'),
+            title: 'Report bug',
+            icon: Icons.bug_report_outlined,
+            isSelected: isBug,
+            onTap: () {
+              context
+                  .read<FeedbackBloc>()
+                  .add(const FeedbackTypeChanged(FeedbackType.bug));
+            },
           ),
         ),
-        IconButton(
-          key: const Key('feedback_close_button'),
-          icon: Icon(Icons.close, color: theme.mutedTextColor),
-          onPressed: onClose,
-          splashRadius: 20,
+        const SizedBox(width: 8),
+        Expanded(
+          child: _TypeCard(
+            key: const Key('feedback_type_feature'),
+            title: 'Idea or request',
+            icon: Icons.lightbulb_outline,
+            isSelected: isIdea,
+            onTap: () {
+              context
+                  .read<FeedbackBloc>()
+                  .add(const FeedbackTypeChanged(FeedbackType.feature));
+            },
+          ),
         ),
       ],
     );
   }
 }
 
-class _TypeSelector extends StatelessWidget {
-  const _TypeSelector();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = FeedbackOSTheme.of(context);
-    final currentType = context.select((FeedbackBloc b) => b.state.type);
-
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.secondaryBackgroundColor,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      padding: const EdgeInsets.all(4),
-      child: Row(
-        children: [
-          Expanded(
-            child: _TypeButton(
-              key: const Key('feedback_type_bug'),
-              title: 'Bug Report',
-              icon: Icons.bug_report_outlined,
-              isSelected: currentType == FeedbackType.bug,
-              onTap: () {
-                context.read<FeedbackBloc>().add(
-                      const FeedbackTypeChanged(FeedbackType.bug),
-                    );
-              },
-            ),
-          ),
-          const SizedBox(width: 4),
-          Expanded(
-            child: _TypeButton(
-              key: const Key('feedback_type_feature'),
-              title: 'Feature Idea',
-              icon: Icons.lightbulb_outline,
-              isSelected: currentType == FeedbackType.feature,
-              onTap: () {
-                context.read<FeedbackBloc>().add(
-                      const FeedbackTypeChanged(FeedbackType.feature),
-                    );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TypeButton extends StatelessWidget {
+class _TypeCard extends StatelessWidget {
   final String title;
   final IconData icon;
   final bool isSelected;
   final VoidCallback onTap;
 
-  const _TypeButton({
+  const _TypeCard({
     super.key,
     required this.title,
     required this.icon,
@@ -194,99 +264,40 @@ class _TypeButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = FeedbackOSTheme.of(context);
+
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(12),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        height: 62,
         decoration: BoxDecoration(
-          color:
-              isSelected ? theme.secondaryBackgroundColor : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-          border: isSelected
-              ? Border.all(color: theme.primaryColor)
-              : Border.all(color: Colors.transparent),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withAlpha(12),
-                    blurRadius: 4,
-                    offset: const Offset(0, 1),
-                  )
-                ]
-              : null,
+          color: isSelected ? theme.accentSoftColor : theme.surfaceColor,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? theme.accentColor : theme.borderMutedColor,
+            width: isSelected ? 1.5 : 1.0,
+          ),
         ),
-        child: Row(
+        child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               icon,
-              size: 18,
-              color: isSelected ? theme.titleColor : theme.mutedTextColor,
+              size: 20,
+              color: isSelected ? theme.accentColor : theme.secondaryTextColor,
             ),
-            const SizedBox(width: 6),
+            const SizedBox(height: 5),
             Text(
               title,
-              style: isSelected
-                  ? AppStyles.titleSmall.copyWith(color: theme.titleColor)
-                  : AppStyles.labelMedium.copyWith(color: theme.mutedTextColor),
+              style: AppStyles.chipLabel.copyWith(
+                color: isSelected ? theme.textColor : theme.secondaryTextColor,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+              ),
             ),
           ],
         ),
       ),
-    );
-  }
-}
-
-class _CategoryDropdown extends StatelessWidget {
-  const _CategoryDropdown();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = FeedbackOSTheme.of(context);
-    final state = context.select((FeedbackBloc b) => b.state);
-
-    return DropdownButtonFormField<String>(
-      key: const Key('feedback_category_dropdown'),
-      initialValue: state.category,
-      dropdownColor: theme.surfaceColor,
-      style: AppStyles.bodyMedium.copyWith(color: theme.textColor),
-      decoration: InputDecoration(
-        labelText: 'Category (Optional)',
-        labelStyle: AppStyles.labelMedium.copyWith(color: theme.mutedTextColor),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: theme.borderColor),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: theme.borderColor),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: theme.primaryColor),
-        ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      ),
-      items: [
-        DropdownMenuItem<String>(
-          value: null,
-          child: Text('None',
-              style: AppStyles.bodyMedium.copyWith(color: theme.textColor)),
-        ),
-        ...state.availableCategories.map(
-          (cat) => DropdownMenuItem(
-            value: cat,
-            child: Text(cat,
-                style: AppStyles.bodyMedium.copyWith(color: theme.textColor)),
-          ),
-        ),
-      ],
-      onChanged: (value) {
-        context.read<FeedbackBloc>().add(FeedbackCategoryChanged(value));
-      },
     );
   }
 }
@@ -299,28 +310,28 @@ class _TitleField extends StatelessWidget {
     final theme = FeedbackOSTheme.of(context);
     final type = context.select((FeedbackBloc b) => b.state.type);
     final hint = type == FeedbackType.bug
-        ? 'What went wrong?'
-        : 'What feature would you like to see?';
+        ? 'Cannot save my profile'
+        : 'Dark mode for the map';
 
     return TextFormField(
       key: const Key('feedback_title_field'),
-      style: AppStyles.bodyLarge.copyWith(color: theme.textColor),
+      style: AppStyles.cardTitle.copyWith(color: theme.textColor),
       decoration: InputDecoration(
-        labelText: 'Title *',
         hintText: hint,
-        labelStyle: AppStyles.labelMedium.copyWith(color: theme.mutedTextColor),
-        hintStyle: AppStyles.bodySmall.copyWith(color: theme.placeholderColor),
+        hintStyle: AppStyles.bodyMedium.copyWith(color: theme.mutedTextColor),
+        filled: true,
+        fillColor: theme.surfaceColor,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: theme.borderColor),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: theme.borderMutedColor),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: theme.borderColor),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: theme.borderMutedColor),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: theme.primaryColor),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: theme.accentColor, width: 1.5),
         ),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -338,26 +349,28 @@ class _DescriptionField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = FeedbackOSTheme.of(context);
+
     return TextFormField(
       key: const Key('feedback_description_field'),
-      style: AppStyles.bodyLarge.copyWith(color: theme.textColor),
+      style: AppStyles.bodyMedium.copyWith(color: theme.textColor),
+      minLines: 2,
       maxLines: 4,
       decoration: InputDecoration(
-        labelText: 'Description (Optional)',
-        hintText: 'Add details, steps to reproduce, or suggestions...',
-        labelStyle: AppStyles.labelMedium.copyWith(color: theme.mutedTextColor),
-        hintStyle: AppStyles.bodySmall.copyWith(color: theme.placeholderColor),
+        hintText: 'Tapping Save just spins. Tried twice.',
+        hintStyle: AppStyles.bodySmall.copyWith(color: theme.mutedTextColor),
+        filled: true,
+        fillColor: theme.surfaceColor,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: theme.borderColor),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: theme.borderMutedColor),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: theme.borderColor),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: theme.borderMutedColor),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: theme.primaryColor),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: theme.accentColor, width: 1.5),
         ),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -365,119 +378,6 @@ class _DescriptionField extends StatelessWidget {
       onChanged: (value) {
         context.read<FeedbackBloc>().add(FeedbackDescriptionChanged(value));
       },
-    );
-  }
-}
-
-class _SubmitButton extends StatelessWidget {
-  const _SubmitButton({this.initialType = FeedbackType.bug});
-  final FeedbackType initialType;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = FeedbackOSTheme.of(context);
-    final canSubmit = context.select((FeedbackBloc b) => b.state.canSubmit);
-    final isSubmitting =
-        context.select((FeedbackBloc b) => b.state.isSubmitting);
-
-    return ElevatedButton(
-      key: const Key('feedback_submit_button'),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: theme.primaryColor,
-        disabledBackgroundColor: theme.primaryColor.withAlpha(100),
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        elevation: 0,
-      ),
-      onPressed: canSubmit && !isSubmitting
-          ? () {
-              context.read<FeedbackBloc>().add(const FeedbackSubmitted());
-            }
-          : null,
-      child: isSubmitting
-          ? SizedBox(
-              height: 20,
-              width: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: theme.primaryColor,
-              ),
-            )
-          : Text(
-              initialType == FeedbackType.bug ? 'Send' : 'Send',
-              style: AppStyles.labelLarge.copyWith(color: theme.surfaceColor),
-            ),
-    );
-  }
-}
-
-class _SuccessView extends StatelessWidget {
-  final FeedbackSubmitResult? result;
-  final VoidCallback onClose;
-
-  const _SuccessView({required this.result, required this.onClose});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = FeedbackOSTheme.of(context);
-    final isQueued = result?.status == FeedbackSubmitStatus.queued;
-
-    return Padding(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: isQueued
-                  ? theme.warningBackgroundColor
-                  : theme.successBackgroundColor,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              isQueued ? Icons.schedule_outlined : Icons.check_circle_outline,
-              size: 48,
-              color: isQueued ? theme.warningColor : theme.successColor,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            isQueued ? 'Saved for Later' : 'Thank You!',
-            style: AppStyles.titleLarge.copyWith(color: theme.titleColor),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            isQueued
-                ? 'Your feedback is saved offline and will automatically be sent once connectivity returns.'
-                : 'Your feedback has been received and helps us make the app better.',
-            style:
-                AppStyles.bodyMedium.copyWith(color: theme.secondaryTextColor),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              key: const Key('feedback_success_done_button'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: theme.titleColor,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              onPressed: onClose,
-              child: Text(
-                'Done',
-                style:
-                    AppStyles.labelLarge.copyWith(color: theme.onPrimaryColor),
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -501,14 +401,13 @@ class _ScreenshotAttachmentsSection extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Screenshots (optional)',
+              'Screenshots',
               style: AppStyles.labelMedium
                   .copyWith(color: theme.secondaryTextColor),
             ),
             Text(
-              '${attachments.length}/3',
-              style:
-                  AppStyles.bodySmall.copyWith(color: theme.placeholderColor),
+              '${attachments.length} of 3',
+              style: AppStyles.bodySmall.copyWith(color: theme.mutedTextColor),
             ),
           ],
         ),
@@ -561,15 +460,16 @@ class _AttachmentThumbnail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = FeedbackOSTheme.of(context);
+
     return Stack(
       clipBehavior: Clip.none,
       children: [
         Container(
-          width: 64,
-          height: 64,
+          width: 52,
+          height: 70,
           decoration: BoxDecoration(
-            color: theme.secondaryBackgroundColor,
-            borderRadius: BorderRadius.circular(8),
+            color: theme.cardSecondaryColor,
+            borderRadius: BorderRadius.circular(9),
             border: Border.all(color: theme.borderColor),
           ),
           clipBehavior: Clip.antiAlias,
@@ -579,17 +479,17 @@ class _AttachmentThumbnail extends StatelessWidget {
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => Icon(
                     Icons.image,
-                    color: theme.placeholderColor,
+                    color: theme.mutedTextColor,
                   ),
                 )
               : Icon(
                   Icons.image,
-                  color: theme.placeholderColor,
+                  color: theme.mutedTextColor,
                 ),
         ),
         Positioned(
-          top: -4,
-          right: -4,
+          top: -6,
+          right: -6,
           child: GestureDetector(
             key: Key('feedback_remove_attachment_$index'),
             onTap: () {
@@ -598,15 +498,17 @@ class _AttachmentThumbnail extends StatelessWidget {
                   .add(FeedbackAttachmentRemoved(index));
             },
             child: Container(
-              padding: const EdgeInsets.all(2),
+              width: 18,
+              height: 18,
               decoration: BoxDecoration(
-                color: theme.titleColor,
+                color: theme.cardSecondaryColor,
                 shape: BoxShape.circle,
+                border: Border.all(color: theme.borderMutedColor),
               ),
               child: Icon(
                 Icons.close,
-                size: 12,
-                color: theme.onPrimaryColor,
+                size: 11,
+                color: theme.textColor,
               ),
             ),
           ),
@@ -624,17 +526,19 @@ class _AddAttachmentButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = FeedbackOSTheme.of(context);
+
     return GestureDetector(
       key: const Key('feedback_add_attachment_button'),
       onTap: onTap,
       child: Container(
-        width: 64,
-        height: 64,
+        width: 52,
+        height: 70,
         decoration: BoxDecoration(
-          color: theme.backgroundColor,
-          borderRadius: BorderRadius.circular(8),
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(9),
           border: Border.all(
             color: theme.borderMutedColor,
+            style: BorderStyle.solid,
           ),
         ),
         child: Column(
@@ -643,15 +547,273 @@ class _AddAttachmentButton extends StatelessWidget {
             Icon(
               Icons.add_photo_alternate_outlined,
               size: 20,
-              color: theme.mutedTextColor,
+              color: theme.secondaryTextColor,
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 3),
             Text(
               'Add',
-              style: AppStyles.labelSmall.copyWith(color: theme.mutedTextColor),
+              style: AppStyles.stepperLabel
+                  .copyWith(color: theme.secondaryTextColor),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _SubmitButton extends StatelessWidget {
+  const _SubmitButton();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = FeedbackOSTheme.of(context);
+    final canSubmit = context.select((FeedbackBloc b) => b.state.canSubmit);
+    final isSubmitting =
+        context.select((FeedbackBloc b) => b.state.isSubmitting);
+    final type = context.select((FeedbackBloc b) => b.state.type);
+
+    final label = type == FeedbackType.bug ? 'Send report' : 'Send request';
+
+    return Column(
+      children: [
+        SizedBox(
+          width: double.infinity,
+          height: 50,
+          child: ElevatedButton(
+            key: const Key('feedback_submit_button'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: theme.accentColor,
+              disabledBackgroundColor: theme.accentColor.withAlpha(70),
+              foregroundColor: theme.accentOnColor,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(13),
+              ),
+              elevation: 0,
+            ),
+            onPressed: canSubmit && !isSubmitting
+                ? () {
+                    context.read<FeedbackBloc>().add(const FeedbackSubmitted());
+                  }
+                : null,
+            child: isSubmitting
+                ? SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: theme.accentOnColor,
+                    ),
+                  )
+                : Text(
+                    label,
+                    style: AppStyles.buttonPrimary
+                        .copyWith(color: theme.accentOnColor),
+                  ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          'Replies show up in My requests.',
+          style: AppStyles.bodySmall.copyWith(color: theme.mutedTextColor),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+}
+
+class _SuccessView extends StatelessWidget {
+  final FeedbackSubmitResult? result;
+  final FeedbackState state;
+  final VoidCallback onClose;
+  final VoidCallback onViewMyRequests;
+
+  const _SuccessView({
+    required this.result,
+    required this.state,
+    required this.onClose,
+    required this.onViewMyRequests,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = FeedbackOSTheme.of(context);
+    final isQueued = result?.status == FeedbackSubmitStatus.queued;
+    final isBug = state.type == FeedbackType.bug;
+    final attachmentCount = state.attachments.length;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: theme.borderMutedColor,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          Align(
+            alignment: Alignment.topRight,
+            child: IconButton(
+              key: const Key('feedback_close_button'),
+              icon: Icon(Icons.close, color: theme.secondaryTextColor),
+              onPressed: onClose,
+              splashRadius: 20,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: isQueued
+                  ? theme.warningBackgroundColor
+                  : theme.accentSoftColor,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              isQueued ? Icons.schedule_outlined : Icons.check,
+              size: 32,
+              color: isQueued ? theme.warningColor : theme.accentColor,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            isQueued ? 'Saved for Later' : 'Thanks, we got it',
+            style: AppStyles.titleLarge
+                .copyWith(color: theme.titleColor, fontWeight: FontWeight.w700),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            isQueued
+                ? 'Your feedback is saved offline and will automatically be sent once connectivity returns.'
+                : "The team will reply here. You'll get a notification when they reply or when the status changes.",
+            style:
+                AppStyles.bodyMedium.copyWith(color: theme.secondaryTextColor),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 20),
+
+          // Summary Card
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: theme.surfaceColor,
+              border: Border.all(color: theme.borderColor),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        state.title.isNotEmpty
+                            ? state.title
+                            : 'Submitted request',
+                        style: AppStyles.cardTitle
+                            .copyWith(color: theme.titleColor),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${isBug ? 'Bug' : 'Idea'} · $attachmentCount screenshot${attachmentCount == 1 ? '' : 's'}',
+                        style: AppStyles.bodySmall
+                            .copyWith(color: theme.secondaryTextColor),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: theme.statusBackgroundColor('open'),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: theme.statusColor('open'),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        'Open',
+                        style: AppStyles.pillLabel.copyWith(
+                          color: theme.statusForegroundColor('open'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // Action Buttons
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton(
+              key: const Key('feedback_view_requests_button'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.accentColor,
+                foregroundColor: theme.accentOnColor,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(13),
+                ),
+                elevation: 0,
+              ),
+              onPressed: onViewMyRequests,
+              child: Text(
+                'View my requests',
+                style: AppStyles.buttonPrimary
+                    .copyWith(color: theme.accentOnColor),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            height: 46,
+            child: OutlinedButton(
+              key: const Key('feedback_success_done_button'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: theme.textColor,
+                side: BorderSide(color: theme.borderMutedColor),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(13),
+                ),
+              ),
+              onPressed: onClose,
+              child: Text(
+                'Back to app',
+                style: AppStyles.buttonPrimary.copyWith(
+                  color: theme.textColor,
+                  fontWeight: FontWeight.w500,
+                  fontSize: 15,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
