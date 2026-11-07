@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:feedback_os_flutter/feedback_os_flutter.dart';
-import 'package:go_router/go_router.dart';
 import 'router/app_router.dart';
-import 'router/route_names.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -46,7 +44,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _queuedCount = 0;
-  int _failedCount = 0;
   String? _statusMessage;
 
   @override
@@ -57,10 +54,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _refreshCounts() async {
     final queued = await FeedbackOS.instance.getQueuedCount();
-    final failed = await FeedbackOS.instance.getFailedCount();
     setState(() {
       _queuedCount = queued;
-      _failedCount = failed;
     });
   }
 
@@ -139,10 +134,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       'Pending in Offline Queue: $_queuedCount',
                       style: const TextStyle(color: Color(0xFF4B5563)),
                     ),
-                    Text(
-                      'Permanently Failed: $_failedCount',
-                      style: const TextStyle(color: Color(0xFF4B5563)),
-                    ),
                     if (_statusMessage != null) ...[
                       const SizedBox(height: 8),
                       Container(
@@ -204,19 +195,21 @@ class _HomeScreenState extends State<HomeScreen> {
             OutlinedButton.icon(
               icon: const Icon(Icons.dashboard_outlined),
               label: const Text('Community Feature Board'),
-              onPressed: () => context.pushNamed(RouteNames.board),
+              onPressed: () => FeedbackOS.instance.openBoard(context: context),
             ),
             const SizedBox(height: 8),
             OutlinedButton.icon(
               icon: const Icon(Icons.map_outlined),
               label: const Text('Product Roadmap'),
-              onPressed: () => context.pushNamed(RouteNames.roadmap),
+              onPressed: () =>
+                  FeedbackOS.instance.openRoadmap(context: context),
             ),
             const SizedBox(height: 8),
             OutlinedButton.icon(
               icon: const Icon(Icons.forum_outlined),
               label: const Text('My Feedback Threads'),
-              onPressed: () => context.pushNamed(RouteNames.myFeedback),
+              onPressed: () =>
+                  FeedbackOS.instance.openFeedbackDashboard(context: context),
             ),
             const SizedBox(height: 24),
 

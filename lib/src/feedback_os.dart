@@ -84,6 +84,7 @@ class FeedbackOS {
   FeedbackOSOptions? _options;
 
   /// Returns the current configuration options if initialized.
+  @visibleForTesting
   FeedbackOSOptions? get options => _options;
 
   /// Returns the effective runtime theme.
@@ -161,58 +162,11 @@ class FeedbackOS {
   bool get isInitialized => _isInitialized;
 
   /// The active publishable key.
+  @visibleForTesting
   String? get publishableKey => _publishableKey;
 
   /// The currently identified external user ID, if any.
   String? get activeExternalUserId => _activeExternalUserId;
-
-  /// Internal access to the repository (for feature widgets & controllers).
-  FeedbackRepository get repository {
-    _ensureInitialized();
-    return _repository!;
-  }
-
-  /// Internal access to device ID store.
-  DeviceIdStore get deviceIdStore {
-    _ensureInitialized();
-    return _deviceIdStore!;
-  }
-
-  /// Internal access to device info provider.
-  DeviceInfoProvider get deviceInfoProvider {
-    _ensureInitialized();
-    return _deviceInfoProvider!;
-  }
-
-  /// Internal access to offline submission store.
-  SubmissionStore get submissionStore {
-    _ensureInitialized();
-    return _submissionStore!;
-  }
-
-  /// Internal access to upload repository.
-  UploadRepository get uploadRepository {
-    _ensureInitialized();
-    return _uploadRepository!;
-  }
-
-  /// Internal access to upload screenshot use case.
-  UploadScreenshotUseCase get uploadScreenshotUseCase {
-    _ensureInitialized();
-    return _uploadScreenshotUseCase!;
-  }
-
-  /// Internal access to board repository.
-  BoardRepository get boardRepository {
-    _ensureInitialized();
-    return _boardRepository!;
-  }
-
-  /// Internal access to threads repository.
-  ThreadsRepository get threadsRepository {
-    _ensureInitialized();
-    return _threadsRepository!;
-  }
 
   /// Initializes the FeedbackOS SDK.
   ///
@@ -803,18 +757,6 @@ class FeedbackOS {
     return _submissionStore!.getPendingCount(appScope: _publishableKey!);
   }
 
-  /// Returns the number of permanently failed items in the queue.
-  Future<int> getFailedCount() async {
-    _ensureInitialized();
-    return _submissionStore!.getFailedCount(appScope: _publishableKey!);
-  }
-
-  /// Discards all permanently failed feedback items from the queue.
-  Future<void> clearFailedSubmissions() async {
-    _ensureInitialized();
-    await _submissionStore!.clearPermanentlyFailed(appScope: _publishableKey!);
-  }
-
   /// Displays the interactive FeedbackOS submission dialog.
   ///
   /// Safe to call from any valid [BuildContext].
@@ -864,6 +806,7 @@ class FeedbackOS {
           child: BlocProvider<FeedbackBloc>.value(
             value: bloc,
             child: FeedbackFormDialog(
+                initialType: initialType,
                 onPickAttachment: onPickAttachment ?? pickScreenshot,
                 shouldShowCategory: shouldShowCategory),
           ),
@@ -901,7 +844,7 @@ class FeedbackOS {
   }) async {
     _ensureInitialized();
 
-    final bloc = customBloc ?? createBoardBloc();
+    final bloc = customBloc ?? _createBoardBloc();
     bloc.add(const RoadmapStarted());
 
     final route = MaterialPageRoute<void>(
@@ -956,7 +899,7 @@ class FeedbackOS {
   }) async {
     _ensureInitialized();
 
-    final bloc = customBloc ?? createBoardBloc();
+    final bloc = customBloc ?? _createBoardBloc();
     bloc.add(const BoardStarted());
 
     final route = MaterialPageRoute<void>(
@@ -1006,7 +949,7 @@ class FeedbackOS {
   }) async {
     _ensureInitialized();
 
-    final bloc = customBloc ?? createThreadsBloc();
+    final bloc = customBloc ?? _createThreadsBloc();
     bloc.add(const MyItemsStarted());
 
     await Navigator.of(context, rootNavigator: true).push(
@@ -1059,7 +1002,7 @@ class FeedbackOS {
   }) async {
     _ensureInitialized();
 
-    final bloc = customBloc ?? createThreadsBloc();
+    final bloc = customBloc ?? _createThreadsBloc();
     bloc.add(ThreadDetailStarted(itemId));
 
     await Navigator.of(context).push(
@@ -1080,9 +1023,8 @@ class FeedbackOS {
     );
   }
 
-  /// Factory to instantiate a [BoardBloc] configured with SDK dependencies.
-  /// Adheres to Golden Rule 6 & 7 (dependency injection outside widgets).
-  BoardBloc createBoardBloc() {
+  /// Internal factory to instantiate a [BoardBloc] configured with SDK dependencies.
+  BoardBloc _createBoardBloc() {
     _ensureInitialized();
     return BoardBloc(
       getBoardUseCase: _getBoardUseCase!,
@@ -1092,9 +1034,8 @@ class FeedbackOS {
     );
   }
 
-  /// Factory to instantiate a [ThreadsBloc] configured with SDK dependencies.
-  /// Adheres to Golden Rule 6 & 7 (dependency injection outside widgets).
-  ThreadsBloc createThreadsBloc() {
+  /// Internal factory to instantiate a [ThreadsBloc] configured with SDK dependencies.
+  ThreadsBloc _createThreadsBloc() {
     _ensureInitialized();
     return ThreadsBloc(
       getMyItemsUseCase: _getMyItemsUseCase!,
