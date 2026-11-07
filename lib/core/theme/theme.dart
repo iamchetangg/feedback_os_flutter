@@ -108,6 +108,21 @@ class FeedbackOSTheme extends Equatable {
   /// Disabled state background color for buttons.
   final Color disabledButtonColor;
 
+  /// Status color for 'open' (default: #8A8F98).
+  final Color statusOpenColor;
+
+  /// Status color for 'planned' (default: #4DA7FC).
+  final Color statusPlannedColor;
+
+  /// Status color for 'in_progress' (default: #F1CA4B).
+  final Color statusInProgressColor;
+
+  /// Status color for 'shipped' (default: #26A644).
+  final Color statusShippedColor;
+
+  /// Status color for 'closed' (default: #62666D).
+  final Color statusClosedColor;
+
   const FeedbackOSTheme({
     Color? primaryColor,
     Color? primaryLightColor,
@@ -134,6 +149,11 @@ class FeedbackOSTheme extends Equatable {
     Color? infoBackgroundColor,
     Color? buttonColor,
     Color? disabledButtonColor,
+    Color? statusOpenColor,
+    Color? statusPlannedColor,
+    Color? statusInProgressColor,
+    Color? statusShippedColor,
+    Color? statusClosedColor,
   })  : primaryColor = primaryColor ?? defaultPrimaryColor,
         primaryLightColor = primaryLightColor ?? defaultPrimaryLightColor,
         primaryDarkColor = primaryDarkColor ?? defaultPrimaryDarkColor,
@@ -163,7 +183,13 @@ class FeedbackOSTheme extends Equatable {
         infoColor = infoColor ?? defaultInfoColor,
         infoBackgroundColor = infoBackgroundColor ?? defaultInfoBackgroundColor,
         buttonColor = buttonColor ?? primaryColor ?? defaultButtonColor,
-        disabledButtonColor = disabledButtonColor ?? defaultDisabledButtonColor;
+        disabledButtonColor = disabledButtonColor ?? defaultDisabledButtonColor,
+        statusOpenColor = statusOpenColor ?? const Color(0xFF8A8F98),
+        statusPlannedColor = statusPlannedColor ?? const Color(0xFF4DA7FC),
+        statusInProgressColor =
+            statusInProgressColor ?? const Color(0xFFF1CA4B),
+        statusShippedColor = statusShippedColor ?? const Color(0xFF26A644),
+        statusClosedColor = statusClosedColor ?? const Color(0xFF62666D);
 
   /// Predefined light theme matching default styling.
   factory FeedbackOSTheme.light() => const FeedbackOSTheme();
@@ -243,24 +269,32 @@ class FeedbackOSTheme extends Equatable {
     return current;
   }
 
+  /// Resolves the primary accent/dot color for a given status.
+  /// Open: #8A8F98
+  /// Planned: #4DA7FC
+  /// In progress: #F1CA4B
+  /// Shipped: #26A644
+  /// Closed: #62666D
+  Color statusColor(String status) {
+    final normalized = status.toLowerCase().replaceAll('-', '_').trim();
+    return switch (normalized) {
+      'open' || 'under_review' || 'under review' => statusOpenColor,
+      'planned' => statusPlannedColor,
+      'in_progress' || 'in progress' => statusInProgressColor,
+      'shipped' || 'completed' => statusShippedColor,
+      'closed' || 'declined' => statusClosedColor,
+      _ => secondaryTextColor,
+    };
+  }
+
   /// Resolves the background color for a roadmap/item status badge.
   Color statusBackgroundColor(String status) {
-    return switch (status.toLowerCase()) {
-      'planned' => warningBackgroundColor,
-      'in_progress' => infoBackgroundColor,
-      'shipped' => successBackgroundColor,
-      _ => secondaryBackgroundColor,
-    };
+    return statusColor(status).withAlpha(35);
   }
 
   /// Resolves the foreground/text color for a roadmap/item status badge.
   Color statusForegroundColor(String status) {
-    return switch (status.toLowerCase()) {
-      'planned' => warningColor,
-      'in_progress' => infoColor,
-      'shipped' => successColor,
-      _ => secondaryTextColor,
-    };
+    return statusColor(status);
   }
 
   /// Creates a copy of this theme with the given fields replaced.
@@ -290,6 +324,11 @@ class FeedbackOSTheme extends Equatable {
     Color? infoBackgroundColor,
     Color? buttonColor,
     Color? disabledButtonColor,
+    Color? statusOpenColor,
+    Color? statusPlannedColor,
+    Color? statusInProgressColor,
+    Color? statusShippedColor,
+    Color? statusClosedColor,
   }) {
     return FeedbackOSTheme(
       primaryColor: primaryColor ?? this.primaryColor,
@@ -321,6 +360,12 @@ class FeedbackOSTheme extends Equatable {
       infoBackgroundColor: infoBackgroundColor ?? this.infoBackgroundColor,
       buttonColor: buttonColor ?? this.buttonColor,
       disabledButtonColor: disabledButtonColor ?? this.disabledButtonColor,
+      statusOpenColor: statusOpenColor ?? this.statusOpenColor,
+      statusPlannedColor: statusPlannedColor ?? this.statusPlannedColor,
+      statusInProgressColor:
+          statusInProgressColor ?? this.statusInProgressColor,
+      statusShippedColor: statusShippedColor ?? this.statusShippedColor,
+      statusClosedColor: statusClosedColor ?? this.statusClosedColor,
     );
   }
 
@@ -351,6 +396,11 @@ class FeedbackOSTheme extends Equatable {
         infoBackgroundColor,
         buttonColor,
         disabledButtonColor,
+        statusOpenColor,
+        statusPlannedColor,
+        statusInProgressColor,
+        statusShippedColor,
+        statusClosedColor,
       ];
 }
 

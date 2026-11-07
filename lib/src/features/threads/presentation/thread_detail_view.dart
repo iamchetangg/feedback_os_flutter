@@ -141,17 +141,31 @@ class _ThreadDetailViewState extends State<ThreadDetailView> {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: theme.primaryLightColor,
+                  color: theme.statusBackgroundColor(detail.status),
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: Text(
-                  detail.status.replaceAll('_', ' ').toUpperCase(),
-                  style: AppStyles.labelSmall.copyWith(
-                    color: theme.primaryColor,
-                    fontWeight: FontWeight.w700,
-                  ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: BoxDecoration(
+                        color: theme.statusColor(detail.status),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      detail.status.replaceAll('_', ' '),
+                      style: AppStyles.labelSmall.copyWith(
+                        color: theme.statusForegroundColor(detail.status),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -227,6 +241,47 @@ class _ThreadDetailViewState extends State<ThreadDetailView> {
   Widget _buildEventTile(BuildContext context, ThreadEvent event) {
     final theme = FeedbackOSTheme.of(context);
 
+    if (event.newStatus != null) {
+      final status = event.newStatus!;
+      final dotColor = theme.statusColor(status);
+      final fg = theme.statusForegroundColor(status);
+      final bg = theme.statusBackgroundColor(status);
+
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Center(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: bg,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: dotColor,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Status updated to: ${status.replaceAll('_', ' ')}',
+                  style: AppStyles.labelSmall.copyWith(
+                    color: fg,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Center(
@@ -237,9 +292,7 @@ class _ThreadDetailViewState extends State<ThreadDetailView> {
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
-            event.newStatus != null
-                ? 'Status updated to: ${event.newStatus!.replaceAll('_', ' ')}'
-                : 'Timeline update: ${event.type}',
+            'Timeline update: ${event.type}',
             style:
                 AppStyles.labelSmall.copyWith(color: theme.secondaryTextColor),
           ),
@@ -262,12 +315,13 @@ class _ThreadDetailViewState extends State<ThreadDetailView> {
             constraints: const BoxConstraints(maxWidth: 300),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: isAdmin ? theme.primaryLightColor : theme.surfaceColor,
+              color:
+                  isAdmin ? theme.secondaryBackgroundColor : theme.primaryColor,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color:
-                    isAdmin ? theme.primaryLightBorderColor : theme.borderColor,
-              ),
+              // border: Border.all(
+              //   color:
+              //       isAdmin ? theme.primaryLightBorderColor : theme.borderColor,
+              // ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -285,21 +339,25 @@ class _ThreadDetailViewState extends State<ThreadDetailView> {
                       style: AppStyles.labelSmall.copyWith(
                         fontWeight: FontWeight.w700,
                         color:
-                            isAdmin ? theme.primaryDarkColor : theme.titleColor,
+                            isAdmin ? theme.primaryColor : theme.surfaceColor,
                       ),
                     ),
                     const SizedBox(width: 8),
                     Text(
                       '${reply.createdAt.hour.toString().padLeft(2, '0')}:${reply.createdAt.minute.toString().padLeft(2, '0')}',
-                      style: AppStyles.labelSmall
-                          .copyWith(fontSize: 10, color: theme.mutedTextColor),
+                      style: AppStyles.labelSmall.copyWith(
+                          fontSize: 10,
+                          color: isAdmin
+                              ? theme.mutedTextColor
+                              : theme.surfaceColor),
                     ),
                   ],
                 ),
                 const SizedBox(height: 6),
                 Text(
                   reply.body,
-                  style: AppStyles.bodyMedium.copyWith(color: theme.textColor),
+                  style: AppStyles.bodyMedium.copyWith(
+                      color: isAdmin ? theme.textColor : theme.surfaceColor),
                 ),
               ],
             ),

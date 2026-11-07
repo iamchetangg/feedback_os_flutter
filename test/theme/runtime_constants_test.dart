@@ -97,28 +97,38 @@ void main() {
       expect(derived.backgroundColor, equals(Colors.grey));
     });
 
-    test('statusBackgroundColor and statusForegroundColor map correctly', () {
+    test(
+        'statusColor, statusBackgroundColor, and statusForegroundColor map correctly',
+        () {
       const theme = FeedbackOSTheme();
 
+      expect(theme.statusColor('open'), equals(const Color(0xFF8A8F98)));
+      expect(theme.statusColor('under_review'), equals(const Color(0xFF8A8F98)));
+      expect(theme.statusColor('planned'), equals(const Color(0xFF4DA7FC)));
+      expect(theme.statusColor('in_progress'), equals(const Color(0xFFF1CA4B)));
+      expect(theme.statusColor('in progress'), equals(const Color(0xFFF1CA4B)));
+      expect(theme.statusColor('shipped'), equals(const Color(0xFF26A644)));
+      expect(theme.statusColor('completed'), equals(const Color(0xFF26A644)));
+      expect(theme.statusColor('closed'), equals(const Color(0xFF62666D)));
+      expect(theme.statusColor('declined'), equals(const Color(0xFF62666D)));
+      expect(theme.statusColor('unknown'), equals(theme.secondaryTextColor));
+
+      expect(theme.statusForegroundColor('planned'), equals(theme.statusPlannedColor));
       expect(theme.statusBackgroundColor('planned'),
-          equals(theme.warningBackgroundColor));
-      expect(theme.statusForegroundColor('planned'),
-          equals(theme.warningColor));
+          equals(theme.statusPlannedColor.withAlpha(35)));
 
-      expect(theme.statusBackgroundColor('in_progress'),
-          equals(theme.infoBackgroundColor));
       expect(theme.statusForegroundColor('in_progress'),
-          equals(theme.infoColor));
+          equals(theme.statusInProgressColor));
+      expect(theme.statusBackgroundColor('in_progress'),
+          equals(theme.statusInProgressColor.withAlpha(35)));
 
+      expect(theme.statusForegroundColor('shipped'), equals(theme.statusShippedColor));
       expect(theme.statusBackgroundColor('shipped'),
-          equals(theme.successBackgroundColor));
-      expect(theme.statusForegroundColor('shipped'),
-          equals(theme.successColor));
+          equals(theme.statusShippedColor.withAlpha(35)));
 
+      expect(theme.statusForegroundColor('unknown'), equals(theme.secondaryTextColor));
       expect(theme.statusBackgroundColor('unknown'),
-          equals(theme.secondaryBackgroundColor));
-      expect(theme.statusForegroundColor('unknown'),
-          equals(theme.secondaryTextColor));
+          equals(theme.secondaryTextColor.withAlpha(35)));
     });
 
     test('copyWith updates specified fields', () {

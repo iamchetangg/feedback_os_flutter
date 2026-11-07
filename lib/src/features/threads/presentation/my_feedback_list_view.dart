@@ -231,17 +231,34 @@ class MyFeedbackListView extends StatelessWidget {
     final theme = FeedbackOSTheme.of(context);
     final bg = theme.statusBackgroundColor(status);
     final fg = theme.statusForegroundColor(status);
+    final dotColor = theme.statusColor(status);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(6),
       ),
-      child: Text(
-        status.replaceAll('_', ' '),
-        style: AppStyles.labelSmall
-            .copyWith(color: fg, fontWeight: FontWeight.w600),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 7,
+            height: 7,
+            decoration: BoxDecoration(
+              color: dotColor,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            status.replaceAll('_', ' '),
+            style: AppStyles.labelSmall.copyWith(
+              color: fg,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }
