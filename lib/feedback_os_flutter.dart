@@ -87,11 +87,13 @@ export 'src/features/feedback/data/datasources/in_memory_submission_store.dart'
 export 'src/features/feedback/data/datasources/sqlite_submission_store.dart'
     show SqliteSubmissionStore;
 
-// Upload & Attachment Entities
+// Upload & Attachment Entities & Utilities
 export 'src/features/uploads/domain/entities/upload_reservation.dart'
     show UploadReservation;
 export 'src/features/uploads/domain/entities/screenshot_attachment.dart'
     show ScreenshotAttachment;
+export 'src/core/utils/image_compressor.dart' show ImageCompressor;
+export 'src/core/utils/screenshot_picker.dart' show defaultScreenshotPicker;
 
 // Community Board & Roadmap Entities
 export 'src/features/board/domain/entities/board_item.dart' show BoardItem;

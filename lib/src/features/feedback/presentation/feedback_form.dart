@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/theme.dart';
 import '../../../../core/theme/styles.dart';
+import '../../../core/utils/image_compressor.dart';
+import '../../../core/utils/screenshot_picker.dart';
 import '../../uploads/domain/entities/screenshot_attachment.dart';
 import '../domain/entities/feedback_submit_result.dart';
 import '../domain/entities/feedback_type.dart';
@@ -485,10 +487,7 @@ class _ScreenshotAttachmentsSection extends StatelessWidget {
     final theme = FeedbackOSTheme.of(context);
     final attachments = context.select((FeedbackBloc b) => b.state.attachments);
     final canAdd = context.select((FeedbackBloc b) => b.state.canAddAttachment);
-
-    if (attachments.isEmpty && onPickAttachment == null) {
-      return const SizedBox.shrink();
-    }
+    final picker = onPickAttachment ?? defaultScreenshotPicker;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -521,14 +520,19 @@ class _ScreenshotAttachmentsSection extends StatelessWidget {
                     attachment: attachments[i],
                   ),
                 ),
-              if (canAdd && onPickAttachment != null)
+              if (canAdd)
                 _AddAttachmentButton(
                   onTap: () async {
-                    final picked = await onPickAttachment!();
+                    final picked = await picker();
                     if (picked != null && context.mounted) {
+                      final compressed = ImageCompressor.compressAttachment(
+                        bytes: picked.bytes,
+                        fileName: picked.fileName,
+                        localFilePath: picked.localFilePath,
+                      );
                       context
                           .read<FeedbackBloc>()
-                          .add(FeedbackAttachmentAdded(picked));
+                          .add(FeedbackAttachmentAdded(compressed));
                     }
                   },
                 ),

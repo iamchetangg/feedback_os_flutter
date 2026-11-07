@@ -65,6 +65,8 @@ import 'features/threads/presentation/my_feedback_list_view.dart';
 import 'features/threads/presentation/thread_detail_view.dart';
 import 'features/threads/state/threads_bloc.dart';
 import 'features/threads/state/threads_event.dart';
+import 'package:image_picker/image_picker.dart';
+import 'core/utils/screenshot_picker.dart';
 import 'identity/device_id_store.dart';
 import 'identity/device_info_provider.dart';
 
@@ -862,13 +864,22 @@ class FeedbackOS {
           child: BlocProvider<FeedbackBloc>.value(
             value: bloc,
             child: FeedbackFormDialog(
-                onPickAttachment: onPickAttachment,
+                onPickAttachment: onPickAttachment ?? pickScreenshot,
                 shouldShowCategory: shouldShowCategory),
           ),
         );
       },
     );
   }
+
+  /// Default screenshot picker using [ImagePicker] from device gallery.
+  ///
+  /// Automatically compresses picked screenshots strictly to under 256 KB
+  /// without modifying original resolution.
+  static Future<ScreenshotAttachment?> pickScreenshot({
+    ImagePicker? customPicker,
+  }) =>
+      defaultScreenshotPicker(customPicker: customPicker);
 
   /// Opens the [RoadmapView] on a new screen.
   ///
@@ -904,14 +915,6 @@ class FeedbackOS {
               isFromBoard: isFromBoard,
               onBack: onBack ?? () => Navigator.of(routeContext).pop(),
               onOpenDashboard: onOpenDashboard ??
-                  (isFromBoard
-                      ? () => Navigator.of(routeContext).pop()
-                      : () => openBoard(
-                            context: routeContext,
-                            customBloc: bloc,
-                            isFromRoadmap: true,
-                          )),
-              onOpenBoard: onOpenBoard ??
                   (isFromBoard
                       ? () => Navigator.of(routeContext).pop()
                       : () => openBoard(

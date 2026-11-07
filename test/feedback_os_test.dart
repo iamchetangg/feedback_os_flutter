@@ -455,6 +455,102 @@ void main() {
       expect(dummyUploader.uploadedBytes,
           equals(Uint8List.fromList([10, 20, 30])));
     });
+
+    test(
+        'submitFeedback uploads screenshot first then references uploadId in submit payload',
+        () async {
+      final dummyUploader = _FakeBinaryUploader();
+      final uploadRepo = UploadRepositoryImpl(
+        remoteDataSource: UploadRemoteDataSourceImpl(client: mockHttpClient),
+        binaryUploader: dummyUploader,
+      );
+
+      await FeedbackOS.instance.reset();
+      await FeedbackOS.instance.initializeTest(
+        publishableKey: testKey,
+        deviceIdStore: inMemoryDeviceStore,
+        submissionStore: inMemorySubmissionStore,
+        httpClient: mockHttpClient,
+        deviceInfoProvider: const StaticDeviceInfoProvider(),
+        uploadRepository: uploadRepo,
+      );
+
+      // 1. Mock upload reservation
+      when(
+        () => mockHttpClient.post<Map<String, dynamic>>(
+          ApiEndpoints.uploads,
+          data: any(named: 'data'),
+          queryParameters: any(named: 'queryParameters'),
+          options: any(named: 'options'),
+          cancelToken: any(named: 'cancelToken'),
+          includeAuthHeaders: any(named: 'includeAuthHeaders'),
+        ),
+      ).thenAnswer(
+        (_) async => Response(
+          requestOptions: RequestOptions(path: ApiEndpoints.uploads),
+          statusCode: 201,
+          data: {
+            'upload_id': 'upload-ref-999',
+            'method': 'PUT',
+            'url': 'https://r2.storage.feedbackos.dev/screen.jpg',
+            'headers': {'content-type': 'image/jpeg'},
+            'expires_at': DateTime.now()
+                .add(const Duration(minutes: 15))
+                .toIso8601String(),
+          },
+        ),
+      );
+
+      // 2. Mock feedback submit
+      Map<String, dynamic>? capturedFeedbackPayload;
+      when(
+        () => mockHttpClient.post<Map<String, dynamic>>(
+          ApiEndpoints.feedback,
+          data: any(named: 'data'),
+          queryParameters: any(named: 'queryParameters'),
+          options: any(named: 'options'),
+          cancelToken: any(named: 'cancelToken'),
+          includeAuthHeaders: any(named: 'includeAuthHeaders'),
+        ),
+      ).thenAnswer(
+        (invocation) async {
+          capturedFeedbackPayload =
+              invocation.namedArguments[#data] as Map<String, dynamic>?;
+          return Response(
+            requestOptions: RequestOptions(path: ApiEndpoints.feedback),
+            statusCode: 201,
+            data: {
+              'id': 'item-created-123',
+              'type': 'bug',
+              'title': 'Bug with SS',
+              'description': 'Description',
+              'status': 'open',
+              'is_public': false,
+              'created_at': '2026-10-14T00:00:00Z',
+            },
+          );
+        },
+      );
+
+      final attachment = ScreenshotAttachment(
+        fileName: 'screen.jpg',
+        contentType: 'image/jpeg',
+        bytes: Uint8List.fromList([1, 2, 3, 4, 5]),
+      );
+
+      final result = await FeedbackOS.instance.submitFeedback(
+        type: FeedbackType.bug,
+        title: 'Bug with SS',
+        attachments: [attachment],
+      );
+
+      expect(result.status, equals(FeedbackSubmitStatus.sent));
+      expect(result.itemId, equals('item-created-123'));
+      expect(dummyUploader.uploadedBytes, equals(attachment.bytes));
+      expect(capturedFeedbackPayload, isNotNull);
+      expect(capturedFeedbackPayload!['screenshot_upload_ids'],
+          equals(['upload-ref-999']));
+    });
   });
 
   group('FeedbackOS Board & Roadmap Facade Operations', () {
