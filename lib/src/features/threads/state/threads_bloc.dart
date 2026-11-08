@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../domain/usecases/get_my_items_use_case.dart';
 import '../domain/usecases/get_thread_detail_use_case.dart';
@@ -13,6 +14,8 @@ class ThreadsBloc extends Bloc<ThreadsEvent, ThreadsState> {
   final GetUnreadCountUseCase _getUnreadCountUseCase;
   final SendReplyUseCase _sendReplyUseCase;
   final MarkThreadReadUseCase _markThreadReadUseCase;
+
+  Timer? _pollingTimer;
 
   ThreadsBloc({
     required GetMyItemsUseCase getMyItemsUseCase,
@@ -31,6 +34,9 @@ class ThreadsBloc extends Bloc<ThreadsEvent, ThreadsState> {
     on<ThreadDetailStarted>(_onThreadDetailStarted);
     on<ThreadReplySubmitted>(_onThreadReplySubmitted);
     on<ThreadReadMarked>(_onThreadReadMarked);
+    on<ThreadPollingStarted>(_onThreadPollingStarted);
+    on<ThreadPollingStopped>(_onThreadPollingStopped);
+    on<ThreadDetailRefreshed>(_onThreadDetailRefreshed);
   }
 
   Future<void> _onMyItemsStarted(
@@ -64,9 +70,23 @@ class ThreadsBloc extends Bloc<ThreadsEvent, ThreadsState> {
     ThreadDetailStarted event,
     Emitter<ThreadsState> emit,
   ) async {
+    // 1. Optimistically clear unread status on the selected item in local items
+    bool wasUnread = false;
+    final updatedItems = state.items.map((item) {
+      if (item.id == event.itemId) {
+        if (item.hasUnread) wasUnread = true;
+        return item.copyWith(hasUnread: false);
+      }
+      return item;
+    }).toList();
+
     emit(state.copyWith(
       status: ThreadsStatus.loading,
       errorMessage: null,
+      items: updatedItems,
+      unreadCount: wasUnread
+          ? (state.unreadCount - 1).clamp(0, 999999)
+          : state.unreadCount,
     ));
 
     final result = await _getThreadDetailUseCase(itemId: event.itemId);
@@ -84,19 +104,8 @@ class ThreadsBloc extends Bloc<ThreadsEvent, ThreadsState> {
           selectedThread: detail,
         ));
 
-        // Mark read asynchronously and update local unread state
+        // Mark read asynchronously on server
         await _markThreadReadUseCase(itemId: event.itemId);
-        final updatedItems = state.items.map((item) {
-          if (item.id == event.itemId) {
-            return item;
-          }
-          return item;
-        }).toList();
-
-        emit(state.copyWith(
-          items: updatedItems,
-          unreadCount: (state.unreadCount - 1).clamp(0, 999999),
-        ));
       },
     );
   }
@@ -128,6 +137,9 @@ class ThreadsBloc extends Bloc<ThreadsEvent, ThreadsState> {
           isSendingReply: false,
           selectedThread: updatedThread,
         ));
+
+        // Re-fetch immediately to sync status and timestamps with server
+        add(ThreadDetailRefreshed(event.itemId, isSilent: true));
       },
     );
   }
@@ -136,6 +148,81 @@ class ThreadsBloc extends Bloc<ThreadsEvent, ThreadsState> {
     ThreadReadMarked event,
     Emitter<ThreadsState> emit,
   ) async {
+    bool wasUnread = false;
+    final updatedItems = state.items.map((item) {
+      if (item.id == event.itemId) {
+        if (item.hasUnread) wasUnread = true;
+        return item.copyWith(hasUnread: false);
+      }
+      return item;
+    }).toList();
+
+    emit(state.copyWith(
+      items: updatedItems,
+      unreadCount: wasUnread
+          ? (state.unreadCount - 1).clamp(0, 999999)
+          : state.unreadCount,
+    ));
+
     await _markThreadReadUseCase(itemId: event.itemId);
+  }
+
+  void _onThreadPollingStarted(
+    ThreadPollingStarted event,
+    Emitter<ThreadsState> emit,
+  ) {
+    _pollingTimer?.cancel();
+    final interval = event.interval ?? const Duration(seconds: 4);
+    _pollingTimer = Timer.periodic(interval, (_) {
+      if (!isClosed) {
+        add(ThreadDetailRefreshed(event.itemId, isSilent: true));
+      }
+    });
+  }
+
+  void _onThreadPollingStopped(
+    ThreadPollingStopped event,
+    Emitter<ThreadsState> emit,
+  ) {
+    _pollingTimer?.cancel();
+    _pollingTimer = null;
+  }
+
+  Future<void> _onThreadDetailRefreshed(
+    ThreadDetailRefreshed event,
+    Emitter<ThreadsState> emit,
+  ) async {
+    if (!event.isSilent) {
+      emit(state.copyWith(
+        status: ThreadsStatus.loading,
+        errorMessage: null,
+      ));
+    }
+
+    final result = await _getThreadDetailUseCase(itemId: event.itemId);
+
+    result.fold(
+      (failure) {
+        if (!event.isSilent) {
+          emit(state.copyWith(
+            status: ThreadsStatus.failure,
+            errorMessage: failure.message,
+          ));
+        }
+      },
+      (detail) {
+        emit(state.copyWith(
+          selectedThread: detail,
+          status: ThreadsStatus.success,
+        ));
+      },
+    );
+  }
+
+  @override
+  Future<void> close() {
+    _pollingTimer?.cancel();
+    _pollingTimer = null;
+    return super.close();
   }
 }

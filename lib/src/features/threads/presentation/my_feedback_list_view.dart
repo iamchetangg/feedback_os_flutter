@@ -78,31 +78,62 @@ class MyFeedbackListView extends StatelessWidget {
         }
 
         if (state.items.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+          return RefreshIndicator(
+            color: theme.accentColor,
+            backgroundColor: theme.surfaceColor,
+            onRefresh: () async {
+              final bloc = context.read<ThreadsBloc>();
+              final nextState = bloc.stream.firstWhere(
+                (s) => s.status != ThreadsStatus.loading,
+              );
+              bloc.add(const MyItemsStarted());
+              await nextState;
+            },
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
               children: [
-                Icon(Icons.inbox_outlined,
-                    size: 56, color: theme.placeholderColor),
-                const SizedBox(height: 12),
-                Text(
-                  'You have not submitted any feedback yet.',
-                  style: AppStyles.bodyMedium
-                      .copyWith(color: theme.mutedTextColor),
+                SizedBox(height: MediaQuery.of(context).size.height * 0.25),
+                Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.inbox_outlined,
+                          size: 56, color: theme.placeholderColor),
+                      const SizedBox(height: 12),
+                      Text(
+                        'You have not submitted any feedback yet.',
+                        style: AppStyles.bodyMedium
+                            .copyWith(color: theme.mutedTextColor),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
           );
         }
 
-        return ListView.separated(
-          padding: const EdgeInsets.fromLTRB(14, 10, 14, 80),
-          itemCount: state.items.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 10),
-          itemBuilder: (context, index) {
-            final item = state.items[index];
-            return _buildItemCard(context, item, theme);
+        return RefreshIndicator(
+          color: theme.accentColor,
+          backgroundColor: theme.surfaceColor,
+          onRefresh: () async {
+            final bloc = context.read<ThreadsBloc>();
+            final nextState = bloc.stream.firstWhere(
+              (s) => s.status != ThreadsStatus.loading,
+            );
+            bloc.add(const MyItemsStarted());
+            await nextState;
           },
+          child: ListView.separated(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(14, 10, 14, 80),
+            itemCount: state.items.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            itemBuilder: (context, index) {
+              final item = state.items[index];
+              return _buildItemCard(context, item, theme);
+            },
+          ),
         );
       },
     );

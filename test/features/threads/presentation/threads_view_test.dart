@@ -115,6 +115,49 @@ void main() {
       expect(find.text('Feedback'), findsOneWidget);
       expect(find.text('Crash on Android 14'), findsOneWidget);
       expect(find.text('In progress'), findsOneWidget);
+      expect(find.byType(RefreshIndicator), findsOneWidget);
+    });
+
+    testWidgets('MyFeedbackListView pull-to-refresh triggers MyItemsStarted',
+        (tester) async {
+      when(() => mockGetMyItems.call(cancelToken: any(named: 'cancelToken')))
+          .thenAnswer((_) async => Right([testItem]));
+      when(() => mockGetUnreadCount.call(cancelToken: any(named: 'cancelToken')))
+          .thenAnswer((_) async => const Right(UnreadCount(count: 0)));
+
+      bloc = ThreadsBloc(
+        getMyItemsUseCase: mockGetMyItems,
+        getThreadDetailUseCase: mockGetThreadDetail,
+        getUnreadCountUseCase: mockGetUnreadCount,
+        sendReplyUseCase: mockSendReply,
+        markThreadReadUseCase: mockMarkThreadRead,
+        initialState: ThreadsState(
+          status: ThreadsStatus.success,
+          items: [testItem],
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: BlocProvider<ThreadsBloc>.value(
+            value: bloc,
+            child: const MyFeedbackListView(),
+          ),
+        ),
+      );
+
+      await tester.pump();
+
+      // Trigger pull to refresh
+      await tester.fling(
+        find.byType(ListView),
+        const Offset(0, 300),
+        1000,
+      );
+      await tester.pumpAndSettle();
+
+      verify(() => mockGetMyItems.call(cancelToken: any(named: 'cancelToken')))
+          .called(1);
     });
 
     testWidgets('ThreadDetailView renders conversation and allows reply input',

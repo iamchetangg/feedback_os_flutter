@@ -28,6 +28,35 @@ class MyFeedbackItem extends Equatable {
     this.replyCount = 0,
   });
 
+  /// Creates a copy of this item with specified properties replaced.
+  MyFeedbackItem copyWith({
+    String? id,
+    String? title,
+    String? type,
+    String? category,
+    String? status,
+    bool? hasUnread,
+    DateTime? lastActivityAt,
+    DateTime? createdAt,
+    String? description,
+    String? latestReplyPreview,
+    int? replyCount,
+  }) {
+    return MyFeedbackItem(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      type: type ?? this.type,
+      category: category ?? this.category,
+      status: status ?? this.status,
+      hasUnread: hasUnread ?? this.hasUnread,
+      lastActivityAt: lastActivityAt ?? this.lastActivityAt,
+      createdAt: createdAt ?? this.createdAt,
+      description: description ?? this.description,
+      latestReplyPreview: latestReplyPreview ?? this.latestReplyPreview,
+      replyCount: replyCount ?? this.replyCount,
+    );
+  }
+
   @override
   List<Object?> get props => [
         id,

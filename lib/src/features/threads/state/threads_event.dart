@@ -41,3 +41,27 @@ class ThreadReadMarked extends ThreadsEvent {
   @override
   List<Object?> get props => [itemId];
 }
+
+class ThreadPollingStarted extends ThreadsEvent {
+  final String itemId;
+  final Duration? interval;
+
+  const ThreadPollingStarted(this.itemId, {this.interval});
+
+  @override
+  List<Object?> get props => [itemId, interval];
+}
+
+class ThreadPollingStopped extends ThreadsEvent {
+  const ThreadPollingStopped();
+}
+
+class ThreadDetailRefreshed extends ThreadsEvent {
+  final String itemId;
+  final bool isSilent;
+
+  const ThreadDetailRefreshed(this.itemId, {this.isSilent = true});
+
+  @override
+  List<Object?> get props => [itemId, isSilent];
+}

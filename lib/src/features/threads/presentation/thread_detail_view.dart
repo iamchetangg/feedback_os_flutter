@@ -13,22 +13,69 @@ import '../state/threads_state.dart';
 class ThreadDetailView extends StatefulWidget {
   final String itemId;
   final VoidCallback? onBack;
+  final Duration? pollingInterval;
 
   const ThreadDetailView({
     super.key,
     required this.itemId,
     this.onBack,
+    this.pollingInterval,
   });
 
   @override
   State<ThreadDetailView> createState() => _ThreadDetailViewState();
 }
 
-class _ThreadDetailViewState extends State<ThreadDetailView> {
+class _ThreadDetailViewState extends State<ThreadDetailView>
+    with WidgetsBindingObserver {
   final TextEditingController _replyController = TextEditingController();
+  late ThreadsBloc _threadsBloc;
+  bool _pollingStarted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _threadsBloc = context.read<ThreadsBloc>();
+    if (!_pollingStarted) {
+      _pollingStarted = true;
+      _threadsBloc.add(
+        ThreadPollingStarted(
+          widget.itemId,
+          interval: widget.pollingInterval,
+        ),
+      );
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _threadsBloc.add(
+        ThreadDetailRefreshed(widget.itemId, isSilent: true),
+      );
+      _threadsBloc.add(
+        ThreadPollingStarted(
+          widget.itemId,
+          interval: widget.pollingInterval,
+        ),
+      );
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden) {
+      _threadsBloc.add(const ThreadPollingStopped());
+    }
+  }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _threadsBloc.add(const ThreadPollingStopped());
     _replyController.dispose();
     super.dispose();
   }
@@ -37,7 +84,7 @@ class _ThreadDetailViewState extends State<ThreadDetailView> {
     final text = _replyController.text.trim();
     if (text.isEmpty) return;
 
-    context.read<ThreadsBloc>().add(ThreadReplySubmitted(
+    _threadsBloc.add(ThreadReplySubmitted(
           itemId: widget.itemId,
           message: text,
         ));
