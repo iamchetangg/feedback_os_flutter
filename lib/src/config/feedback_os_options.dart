@@ -4,9 +4,6 @@ import '../core/network/api_endpoints.dart';
 
 /// Configuration options for initializing the FeedbackOS SDK.
 class FeedbackOSOptions extends Equatable {
-  /// Base URL of the FeedbackOS API backend.
-  final Uri baseUrl;
-
   /// HTTP connect timeout. Defaults to 15 seconds.
   final Duration connectTimeout;
 
@@ -33,7 +30,6 @@ class FeedbackOSOptions extends Equatable {
   final Duration threadPollingInterval;
 
   FeedbackOSOptions({
-    Uri? baseUrl,
     this.connectTimeout = const Duration(seconds: 15),
     this.receiveTimeout = const Duration(seconds: 15),
     this.debugLogging = false,
@@ -41,44 +37,7 @@ class FeedbackOSOptions extends Equatable {
     this.queueItemTtl = const Duration(days: 7),
     this.theme = const FeedbackOSTheme(),
     this.threadPollingInterval = const Duration(seconds: 4),
-  }) : baseUrl = baseUrl ?? ApiEndpoints.productionBaseUrl;
-
-  /// Factory constructor for staging environment.
-  /// Uses the verified staging Cloudflare Worker endpoint.
-  factory FeedbackOSOptions.staging({
-    Duration connectTimeout = const Duration(seconds: 15),
-    Duration receiveTimeout = const Duration(seconds: 15),
-    bool debugLogging = false,
-    FeedbackOSTheme theme = const FeedbackOSTheme(),
-    Duration threadPollingInterval = const Duration(seconds: 4),
-  }) {
-    return FeedbackOSOptions(
-      baseUrl: ApiEndpoints.stagingBaseUrl,
-      connectTimeout: connectTimeout,
-      receiveTimeout: receiveTimeout,
-      debugLogging: debugLogging,
-      theme: theme,
-      threadPollingInterval: threadPollingInterval,
-    );
-  }
-
-  /// Factory constructor for local development.
-  factory FeedbackOSOptions.local({
-    Duration connectTimeout = const Duration(seconds: 15),
-    Duration receiveTimeout = const Duration(seconds: 15),
-    bool debugLogging = true,
-    FeedbackOSTheme theme = const FeedbackOSTheme(),
-    Duration threadPollingInterval = const Duration(seconds: 4),
-  }) {
-    return FeedbackOSOptions(
-      baseUrl: ApiEndpoints.localBaseUrl,
-      connectTimeout: connectTimeout,
-      receiveTimeout: receiveTimeout,
-      debugLogging: debugLogging,
-      theme: theme,
-      threadPollingInterval: threadPollingInterval,
-    );
-  }
+  });
 
   /// Creates a copy of this configuration with the given fields replaced.
   FeedbackOSOptions copyWith({
@@ -92,7 +51,6 @@ class FeedbackOSOptions extends Equatable {
     Duration? threadPollingInterval,
   }) {
     return FeedbackOSOptions(
-      baseUrl: baseUrl ?? this.baseUrl,
       connectTimeout: connectTimeout ?? this.connectTimeout,
       receiveTimeout: receiveTimeout ?? this.receiveTimeout,
       debugLogging: debugLogging ?? this.debugLogging,
@@ -106,7 +64,6 @@ class FeedbackOSOptions extends Equatable {
 
   @override
   List<Object?> get props => [
-        baseUrl,
         connectTimeout,
         receiveTimeout,
         debugLogging,

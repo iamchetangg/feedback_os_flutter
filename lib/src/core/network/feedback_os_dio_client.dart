@@ -51,7 +51,7 @@ class FeedbackOsDioClient implements FeedbackOsHttpClient {
         _dio = customDio ??
             Dio(
               BaseOptions(
-                baseUrl: options.baseUrl.toString(),
+                baseUrl: ApiEndpoints.productionBaseUrl.toString(),
                 connectTimeout: options.connectTimeout,
                 receiveTimeout: options.receiveTimeout,
                 headers: {

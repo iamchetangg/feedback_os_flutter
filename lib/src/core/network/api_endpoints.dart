@@ -1,9 +1,6 @@
 abstract final class ApiEndpoints {
   // Base URLs
   static final Uri productionBaseUrl = Uri.parse('https://api.feedbackos.dev');
-  static final Uri stagingBaseUrl =
-      Uri.parse('https://api-staging.feedbackos.dev');
-  static final Uri localBaseUrl = Uri.parse('http://localhost:8787');
 
   static const String sdkBase = '/v1/sdk';
 
