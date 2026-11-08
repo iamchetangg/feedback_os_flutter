@@ -38,11 +38,16 @@ class _FeedbackContainerViewState extends State<FeedbackContainerView> {
     _selectedTab = widget.initialTabIndex.clamp(0, 2);
   }
 
-  void _openThread(String itemId) {
-    FeedbackOS.instance.openThreadDetail(
+  Future<void> _openThread(String itemId) async {
+    final threadsBloc = context.read<ThreadsBloc>();
+    await FeedbackOS.instance.openThreadDetail(
       context: context,
       itemId: itemId,
+      customBloc: threadsBloc,
     );
+    if (mounted) {
+      threadsBloc.add(const MyItemsStarted());
+    }
   }
 
   Future<void> _openNewRequest() async {

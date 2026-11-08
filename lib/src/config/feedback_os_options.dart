@@ -28,6 +28,10 @@ class FeedbackOSOptions extends Equatable {
   /// User-defined colors and theming for the SDK UI components.
   final FeedbackOSTheme theme;
 
+  /// Periodic short-polling interval for active thread detail screen.
+  /// Defaults to 4 seconds.
+  final Duration threadPollingInterval;
+
   FeedbackOSOptions({
     Uri? baseUrl,
     this.connectTimeout = const Duration(seconds: 15),
@@ -36,6 +40,7 @@ class FeedbackOSOptions extends Equatable {
     this.maxOfflineQueueSize = 500,
     this.queueItemTtl = const Duration(days: 7),
     this.theme = const FeedbackOSTheme(),
+    this.threadPollingInterval = const Duration(seconds: 4),
   }) : baseUrl = baseUrl ?? ApiEndpoints.productionBaseUrl;
 
   /// Factory constructor for staging environment.
@@ -45,6 +50,7 @@ class FeedbackOSOptions extends Equatable {
     Duration receiveTimeout = const Duration(seconds: 15),
     bool debugLogging = false,
     FeedbackOSTheme theme = const FeedbackOSTheme(),
+    Duration threadPollingInterval = const Duration(seconds: 4),
   }) {
     return FeedbackOSOptions(
       baseUrl: ApiEndpoints.stagingBaseUrl,
@@ -52,6 +58,7 @@ class FeedbackOSOptions extends Equatable {
       receiveTimeout: receiveTimeout,
       debugLogging: debugLogging,
       theme: theme,
+      threadPollingInterval: threadPollingInterval,
     );
   }
 
@@ -61,6 +68,7 @@ class FeedbackOSOptions extends Equatable {
     Duration receiveTimeout = const Duration(seconds: 15),
     bool debugLogging = true,
     FeedbackOSTheme theme = const FeedbackOSTheme(),
+    Duration threadPollingInterval = const Duration(seconds: 4),
   }) {
     return FeedbackOSOptions(
       baseUrl: ApiEndpoints.localBaseUrl,
@@ -68,6 +76,7 @@ class FeedbackOSOptions extends Equatable {
       receiveTimeout: receiveTimeout,
       debugLogging: debugLogging,
       theme: theme,
+      threadPollingInterval: threadPollingInterval,
     );
   }
 
@@ -80,6 +89,7 @@ class FeedbackOSOptions extends Equatable {
     int? maxOfflineQueueSize,
     Duration? queueItemTtl,
     FeedbackOSTheme? theme,
+    Duration? threadPollingInterval,
   }) {
     return FeedbackOSOptions(
       baseUrl: baseUrl ?? this.baseUrl,
@@ -89,6 +99,8 @@ class FeedbackOSOptions extends Equatable {
       maxOfflineQueueSize: maxOfflineQueueSize ?? this.maxOfflineQueueSize,
       queueItemTtl: queueItemTtl ?? this.queueItemTtl,
       theme: theme ?? this.theme,
+      threadPollingInterval:
+          threadPollingInterval ?? this.threadPollingInterval,
     );
   }
 
@@ -101,5 +113,6 @@ class FeedbackOSOptions extends Equatable {
         maxOfflineQueueSize,
         queueItemTtl,
         theme,
+        threadPollingInterval,
       ];
 }

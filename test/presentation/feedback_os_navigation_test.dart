@@ -268,6 +268,100 @@ void main() {
       expect(find.byType(ThreadDetailView), findsOneWidget);
       expect(find.text('Your request'), findsOneWidget);
     });
+
+    testWidgets(
+        'tapping unread item in MyFeedbackListView clears New reply badge when returning',
+        (tester) async {
+      when(
+        () => mockHttpClient.get<Map<String, dynamic>>(
+          ApiEndpoints.meItems,
+          queryParameters: any(named: 'queryParameters'),
+          cancelToken: any(named: 'cancelToken'),
+        ),
+      ).thenAnswer(
+        (_) async => Response(
+          requestOptions: RequestOptions(path: ApiEndpoints.meItems),
+          data: {
+            'data': [
+              {
+                'id': 'item_nav_1',
+                'type': 'feature',
+                'title': 'Test Item',
+                'description': 'Test Desc',
+                'status': 'planned',
+                'has_unread': true,
+                'created_at': '2026-10-15T00:00:00.000Z',
+              }
+            ],
+          },
+          statusCode: 200,
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                return ElevatedButton(
+                  key: const Key('open_dash_unread_btn'),
+                  onPressed: () => FeedbackOS.instance
+                      .openFeedbackDashboard(context: context),
+                  child: const Text('Open Dashboard'),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byKey(const Key('open_dash_unread_btn')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(MyFeedbackListView), findsOneWidget);
+      expect(find.text('New reply'), findsOneWidget);
+
+      // On second fetch (after returning and marking read), has_unread is false
+      when(
+        () => mockHttpClient.get<Map<String, dynamic>>(
+          ApiEndpoints.meItems,
+          queryParameters: any(named: 'queryParameters'),
+          cancelToken: any(named: 'cancelToken'),
+        ),
+      ).thenAnswer(
+        (_) async => Response(
+          requestOptions: RequestOptions(path: ApiEndpoints.meItems),
+          data: {
+            'data': [
+              {
+                'id': 'item_nav_1',
+                'type': 'feature',
+                'title': 'Test Item',
+                'description': 'Test Desc',
+                'status': 'planned',
+                'has_unread': false,
+                'created_at': '2026-10-15T00:00:00.000Z',
+              }
+            ],
+          },
+          statusCode: 200,
+        ),
+      );
+
+      // Tap the unread item to open ThreadDetailView
+      await tester.tap(find.text('Test Item'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ThreadDetailView), findsOneWidget);
+
+      // Pop back to container / MyFeedbackListView
+      await tester.tap(find.byIcon(Icons.arrow_back_ios_new_rounded));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(MyFeedbackListView), findsOneWidget);
+      // "New reply" badge is gone!
+      expect(find.text('New reply'), findsNothing);
+    });
   });
 }
 

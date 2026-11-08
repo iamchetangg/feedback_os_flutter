@@ -75,7 +75,10 @@ export 'src/features/threads/state/threads_event.dart'
         MyItemsStarted,
         ThreadDetailStarted,
         ThreadReplySubmitted,
-        ThreadReadMarked;
+        ThreadReadMarked,
+        ThreadPollingStarted,
+        ThreadPollingStopped,
+        ThreadDetailRefreshed;
 export 'src/features/threads/state/threads_state.dart'
     show ThreadsState, ThreadsStatus;
 

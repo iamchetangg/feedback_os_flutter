@@ -979,11 +979,16 @@ class FeedbackOS {
     required String itemId,
     ThreadsBloc? customBloc,
     VoidCallback? onBack,
+    Duration? pollingInterval,
   }) async {
     _ensureInitialized();
 
     final bloc = customBloc ?? _createThreadsBloc();
     bloc.add(ThreadDetailStarted(itemId));
+
+    final effectiveInterval = pollingInterval ??
+        _options?.threadPollingInterval ??
+        const Duration(seconds: 4);
 
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -995,6 +1000,7 @@ class FeedbackOS {
               child: ThreadDetailView(
                 itemId: itemId,
                 onBack: onBack ?? () => Navigator.of(routeContext).pop(),
+                pollingInterval: effectiveInterval,
               ),
             ),
           );
