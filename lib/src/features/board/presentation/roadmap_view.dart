@@ -220,10 +220,14 @@ class _RoadmapViewState extends State<RoadmapView> {
         height: 30,
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
-          color: isSelected ? theme.accentSoftColor : Colors.transparent,
+          color: isSelected
+              ? theme.primaryColor.withAlpha(50)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(15),
           border: Border.all(
-            color: isSelected ? Colors.transparent : theme.borderMutedColor,
+            color: isSelected
+                ? theme.primaryColor
+                : theme.borderMutedColor.withAlpha(50),
           ),
         ),
         alignment: Alignment.center,

@@ -122,7 +122,7 @@ class BoardView extends StatelessWidget {
               fontWeight: FontWeight.w500,
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 12),
           _buildChip(
             label: 'Top',
             isSelected: isTop,
@@ -133,7 +133,7 @@ class BoardView extends StatelessWidget {
               }
             },
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 10),
           _buildChip(
             label: 'Newest',
             isSelected: isNew,
@@ -169,10 +169,14 @@ class BoardView extends StatelessWidget {
         height: 30,
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
-          color: isSelected ? theme.accentSoftColor : Colors.transparent,
+          color: isSelected
+              ? theme.primaryColor.withAlpha(50)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(15),
           border: Border.all(
-            color: isSelected ? Colors.transparent : theme.borderMutedColor,
+            color: isSelected
+                ? theme.primaryColor
+                : theme.borderMutedColor.withAlpha(50),
           ),
         ),
         alignment: Alignment.center,
@@ -251,8 +255,7 @@ class BoardView extends StatelessWidget {
               icon: Icon(Icons.expand_more, color: theme.accentColor),
               label: Text(
                 'Load More',
-                style:
-                    AppStyles.labelMedium.copyWith(color: theme.accentColor),
+                style: AppStyles.labelMedium.copyWith(color: theme.accentColor),
               ),
             ),
           );
@@ -365,10 +368,14 @@ class BoardView extends StatelessWidget {
         width: 42,
         height: 50,
         decoration: BoxDecoration(
-          color: hasVoted ? theme.accentSoftColor : theme.cardSecondaryColor,
+          color: hasVoted
+              ? theme.primaryColor.withAlpha(50)
+              : theme.cardSecondaryColor,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: hasVoted ? theme.accentColor : theme.borderMutedColor,
+            color: hasVoted
+                ? theme.accentColor
+                : theme.borderMutedColor.withAlpha(50),
           ),
         ),
         child: Column(

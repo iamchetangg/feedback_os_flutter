@@ -1,3 +1,4 @@
+import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/theme.dart';
@@ -93,7 +94,8 @@ class FeedbackFormSheet extends StatelessWidget {
                         ),
                         IconButton(
                           key: const Key('feedback_close_button'),
-                          icon: Icon(Icons.close, color: theme.secondaryTextColor),
+                          icon: Icon(Icons.close,
+                              color: theme.secondaryTextColor),
                           onPressed: () {
                             onDismiss?.call();
                             Navigator.of(context, rootNavigator: true).pop();
@@ -272,10 +274,14 @@ class _TypeCard extends StatelessWidget {
         duration: const Duration(milliseconds: 150),
         height: 62,
         decoration: BoxDecoration(
-          color: isSelected ? theme.accentSoftColor : theme.surfaceColor,
+          color: isSelected
+              ? theme.primaryColor.withAlpha(50)
+              : theme.secondaryBackgroundColor,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? theme.accentColor : theme.borderMutedColor,
+            color: isSelected
+                ? theme.accentColor
+                : theme.borderMutedColor.withAlpha(50),
             width: isSelected ? 1.5 : 1.0,
           ),
         ),
@@ -320,14 +326,14 @@ class _TitleField extends StatelessWidget {
         hintText: hint,
         hintStyle: AppStyles.bodyMedium.copyWith(color: theme.mutedTextColor),
         filled: true,
-        fillColor: theme.surfaceColor,
+        fillColor: theme.secondaryBackgroundColor,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: theme.borderMutedColor),
+          borderSide: BorderSide(color: theme.borderMutedColor.withAlpha(50)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: theme.borderMutedColor),
+          borderSide: BorderSide(color: theme.borderMutedColor.withAlpha(50)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -356,17 +362,17 @@ class _DescriptionField extends StatelessWidget {
       minLines: 2,
       maxLines: 4,
       decoration: InputDecoration(
-        hintText: 'Tapping Save just spins. Tried twice.',
+        hintText: 'Your description here...',
         hintStyle: AppStyles.bodySmall.copyWith(color: theme.mutedTextColor),
         filled: true,
-        fillColor: theme.surfaceColor,
+        fillColor: theme.secondaryBackgroundColor,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: theme.borderMutedColor),
+          borderSide: BorderSide(color: theme.borderMutedColor.withAlpha(50)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: theme.borderMutedColor),
+          borderSide: BorderSide(color: theme.borderMutedColor.withAlpha(50)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -412,35 +418,50 @@ class _ScreenshotAttachmentsSection extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              for (int i = 0; i < attachments.length; i++)
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: _AttachmentThumbnail(
-                    index: i,
-                    attachment: attachments[i],
-                  ),
-                ),
-              if (canAdd)
-                _AddAttachmentButton(
-                  onTap: () async {
-                    final picked = await picker();
-                    if (picked != null && context.mounted) {
-                      final compressed = ImageCompressor.compressAttachment(
-                        bytes: picked.bytes,
-                        fileName: picked.fileName,
-                        localFilePath: picked.localFilePath,
-                      );
-                      context
-                          .read<FeedbackBloc>()
-                          .add(FeedbackAttachmentAdded(compressed));
-                    }
-                  },
-                ),
-            ],
+        Container(
+          width: double.infinity,
+          child: DottedBorder(
+            // decoration: BoxDecoration(border: Border.all(style: BorderStyle.solid)),
+            options: RoundedRectDottedBorderOptions(
+              dashPattern: [10, 5],
+              strokeWidth: 2,
+              color: theme.borderMutedColor.withAlpha(100),
+              radius: Radius.circular(12),
+              padding: EdgeInsets.all(10),
+            ),
+            child: Container(
+              child: Row(
+                mainAxisAlignment: attachments.isEmpty
+                    ? MainAxisAlignment.center
+                    : MainAxisAlignment.start,
+                children: [
+                  for (int i = 0; i < attachments.length; i++)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: _AttachmentThumbnail(
+                        index: i,
+                        attachment: attachments[i],
+                      ),
+                    ),
+                  if (canAdd)
+                    _AddAttachmentButton(
+                      onTap: () async {
+                        final picked = await picker();
+                        if (picked != null && context.mounted) {
+                          final compressed = ImageCompressor.compressAttachment(
+                            bytes: picked.bytes,
+                            fileName: picked.fileName,
+                            localFilePath: picked.localFilePath,
+                          );
+                          context
+                              .read<FeedbackBloc>()
+                              .add(FeedbackAttachmentAdded(compressed));
+                        }
+                      },
+                    ),
+                ],
+              ),
+            ),
           ),
         ),
       ],
@@ -470,7 +491,7 @@ class _AttachmentThumbnail extends StatelessWidget {
           decoration: BoxDecoration(
             color: theme.cardSecondaryColor,
             borderRadius: BorderRadius.circular(9),
-            border: Border.all(color: theme.borderColor),
+            border: Border.all(color: theme.borderMutedColor.withAlpha(50)),
           ),
           clipBehavior: Clip.antiAlias,
           child: attachment.bytes.isNotEmpty
@@ -503,7 +524,7 @@ class _AttachmentThumbnail extends StatelessWidget {
               decoration: BoxDecoration(
                 color: theme.cardSecondaryColor,
                 shape: BoxShape.circle,
-                border: Border.all(color: theme.borderMutedColor),
+                border: Border.all(color: theme.borderMutedColor.withAlpha(50)),
               ),
               child: Icon(
                 Icons.close,
@@ -536,10 +557,10 @@ class _AddAttachmentButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.transparent,
           borderRadius: BorderRadius.circular(9),
-          border: Border.all(
-            color: theme.borderMutedColor,
-            style: BorderStyle.solid,
-          ),
+          // border: Border.all(
+          //   color: theme.borderMutedColor,
+          //   style: BorderStyle.solid,
+          // ),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -794,7 +815,7 @@ class _SuccessView extends StatelessWidget {
             width: double.infinity,
             height: 46,
             child: OutlinedButton(
-              key: const Key('feedback_success_done_button'),
+              key: const Key('feedback_back_to_app_button'),
               style: OutlinedButton.styleFrom(
                 foregroundColor: theme.textColor,
                 side: BorderSide(color: theme.borderMutedColor),

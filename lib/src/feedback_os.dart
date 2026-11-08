@@ -260,8 +260,7 @@ class FeedbackOS {
     // Open persistent offline storage
     await _submissionStore!.open();
 
-    _httpClient =
-        httpClient ??
+    _httpClient = httpClient ??
         FeedbackOsDioClient(
           publishableKey: sanitizedKey,
           getDeviceId: () => _deviceIdStore!.getOrCreateDeviceId(),
@@ -274,8 +273,7 @@ class FeedbackOS {
     final uploadRemoteDataSource = UploadRemoteDataSourceImpl(
       client: _httpClient!,
     );
-    _uploadRepository =
-        uploadRepository ??
+    _uploadRepository = uploadRepository ??
         UploadRepositoryImpl(
           remoteDataSource: uploadRemoteDataSource,
           binaryUploader: binaryUploader ?? DioBinaryUploader(),
@@ -284,15 +282,13 @@ class FeedbackOS {
     final boardRemoteDataSource = BoardRemoteDataSourceImpl(
       client: _httpClient!,
     );
-    _boardRepository =
-        boardRepository ??
+    _boardRepository = boardRepository ??
         BoardRepositoryImpl(remoteDataSource: boardRemoteDataSource);
 
     final threadsRemoteDataSource = ThreadsRemoteDataSourceImpl(
       client: _httpClient!,
     );
-    _threadsRepository =
-        threadsRepository ??
+    _threadsRepository = threadsRepository ??
         ThreadsRepositoryImpl(remoteDataSource: threadsRemoteDataSource);
 
     _getConfigUseCase = GetSdkConfigUseCase(_repository!);
@@ -788,23 +784,22 @@ class FeedbackOS {
   }) async {
     _ensureInitialized();
 
-    final bloc =
-        customBloc ??
+    final bloc = customBloc ??
         FeedbackBloc(
-          submitHandler:
-              ({
-                required type,
-                required title,
-                required description,
-                category,
-                attachments = const [],
-              }) => submitFeedback(
-                type: type,
-                title: title,
-                description: description,
-                category: category,
-                attachments: attachments,
-              ),
+          submitHandler: ({
+            required type,
+            required title,
+            required description,
+            category,
+            attachments = const [],
+          }) =>
+              submitFeedback(
+            type: type,
+            title: title,
+            description: description,
+            category: category,
+            attachments: attachments,
+          ),
           getConfigUseCase: _getConfigUseCase,
           publishableKey: _publishableKey,
         );
@@ -819,6 +814,7 @@ class FeedbackOS {
     return showModalBottomSheet<FeedbackSubmitResult>(
       context: context,
       isScrollControlled: true,
+      useRootNavigator: true,
       backgroundColor: Colors.transparent,
       builder: (sheetContext) {
         return FeedbackOSThemeProvider(
@@ -843,7 +839,8 @@ class FeedbackOS {
   /// without modifying original resolution.
   static Future<ScreenshotAttachment?> pickScreenshot({
     ImagePicker? customPicker,
-  }) => defaultScreenshotPicker(customPicker: customPicker);
+  }) =>
+      defaultScreenshotPicker(customPicker: customPicker);
 
   /// Opens the unified FeedbackOS container screen.
   ///
@@ -964,12 +961,13 @@ class FeedbackOS {
     ThreadsBloc? customBloc,
     void Function(String itemId)? onItemTap,
     VoidCallback? onBack,
-  }) => openFeedbackDashboard(
-    context: context,
-    customBloc: customBloc,
-    onItemTap: onItemTap,
-    onBack: onBack,
-  );
+  }) =>
+      openFeedbackDashboard(
+        context: context,
+        customBloc: customBloc,
+        onItemTap: onItemTap,
+        onBack: onBack,
+      );
 
   /// Opens the [ThreadDetailView] on a new screen for discussion thread replies.
   ///
@@ -1069,52 +1067,52 @@ class FeedbackOS {
   FeedbackOsException _mapFailureToException(Failure failure) {
     return switch (failure) {
       AuthenticationFailure() => FeedbackOsAuthenticationException(
-        failure.message,
-        code: failure.code ?? 'invalid_key',
-        statusCode: failure.statusCode ?? 401,
-      ),
+          failure.message,
+          code: failure.code ?? 'invalid_key',
+          statusCode: failure.statusCode ?? 401,
+        ),
       SubscriptionFailure() => FeedbackOsSubscriptionException(
-        failure.message,
-        code: failure.code ?? 'subscription_required',
-        statusCode: failure.statusCode ?? 402,
-      ),
+          failure.message,
+          code: failure.code ?? 'subscription_required',
+          statusCode: failure.statusCode ?? 402,
+        ),
       ValidationFailure() => FeedbackOsValidationException(
-        failure.message,
-        code: failure.code ?? 'invalid_request',
-        statusCode: failure.statusCode ?? 400,
-      ),
+          failure.message,
+          code: failure.code ?? 'invalid_request',
+          statusCode: failure.statusCode ?? 400,
+        ),
       FeatureDisabledFailure() => FeedbackOsValidationException(
-        failure.message,
-        code: failure.code ?? 'feature_disabled',
-        statusCode: failure.statusCode ?? 403,
-      ),
+          failure.message,
+          code: failure.code ?? 'feature_disabled',
+          statusCode: failure.statusCode ?? 403,
+        ),
       PayloadTooLargeFailure() => FeedbackOsPayloadTooLargeException(
-        failure.message,
-        statusCode: failure.statusCode ?? 413,
-      ),
+          failure.message,
+          statusCode: failure.statusCode ?? 413,
+        ),
       UploadNotFoundFailure() => FeedbackOsUploadNotFoundException(
-        failure.message,
-        statusCode: failure.statusCode ?? 404,
-      ),
+          failure.message,
+          statusCode: failure.statusCode ?? 404,
+        ),
       UploadInvalidFailure() => FeedbackOsUploadInvalidException(
-        failure.message,
-        statusCode: failure.statusCode ?? 422,
-      ),
+          failure.message,
+          statusCode: failure.statusCode ?? 422,
+        ),
       RateLimitFailure() => FeedbackOsRateLimitException(
-        failure.message,
-        statusCode: failure.statusCode ?? 429,
-        retryAfter: failure.retryAfter,
-      ),
+          failure.message,
+          statusCode: failure.statusCode ?? 429,
+          retryAfter: failure.retryAfter,
+        ),
       NetworkFailure() => FeedbackOsNetworkException(
-        failure.message,
-        statusCode: failure.statusCode,
-      ),
+          failure.message,
+          statusCode: failure.statusCode,
+        ),
       StorageFailure() => FeedbackOsStorageException(failure.message),
       ServerFailure() => FeedbackOsServerException(
-        failure.message,
-        code: failure.code ?? 'internal_error',
-        statusCode: failure.statusCode ?? 500,
-      ),
+          failure.message,
+          code: failure.code ?? 'internal_error',
+          statusCode: failure.statusCode ?? 500,
+        ),
       _ => FeedbackOsServerException(failure.message),
     };
   }

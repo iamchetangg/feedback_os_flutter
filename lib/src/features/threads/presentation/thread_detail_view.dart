@@ -175,6 +175,7 @@ class _ThreadDetailViewState extends State<ThreadDetailView> {
       'shipped' || 'completed' => 3,
       _ => 0,
     };
+    final fg = theme.statusForegroundColor(currentStatus);
 
     return Row(
       children: List.generate(stages.length, (index) {
@@ -193,9 +194,8 @@ class _ThreadDetailViewState extends State<ThreadDetailView> {
                 Container(
                   height: 4,
                   decoration: BoxDecoration(
-                    color: isReached
-                        ? theme.statusPlannedColor
-                        : theme.borderMutedColor,
+                    color:
+                        isReached ? fg : theme.borderMutedColor.withAlpha(50),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -207,7 +207,7 @@ class _ThreadDetailViewState extends State<ThreadDetailView> {
                           : AppStyles.stepperLabel)
                       .copyWith(
                     color: isCurrent
-                        ? theme.statusPlannedColor
+                        ? fg
                         : isReached
                             ? theme.mutedTextColor
                             : theme.placeholderColor,
@@ -380,14 +380,12 @@ class _ThreadDetailViewState extends State<ThreadDetailView> {
                 height: 42,
                 child: TextField(
                   controller: _replyController,
-                  style:
-                      AppStyles.bodyMedium.copyWith(color: theme.textColor),
+                  style: AppStyles.bodyMedium.copyWith(color: theme.textColor),
                   decoration: InputDecoration(
                     hintText: 'Reply to the team',
                     hintStyle: AppStyles.bodyMedium
                         .copyWith(color: theme.placeholderColor),
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 16),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                     filled: true,
                     fillColor: theme.surfaceColor,
                     border: OutlineInputBorder(
