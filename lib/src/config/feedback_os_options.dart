@@ -1,6 +1,5 @@
 import 'package:equatable/equatable.dart';
 import '../../core/theme/theme.dart';
-import '../core/network/api_endpoints.dart';
 
 /// Configuration options for initializing the FeedbackOS SDK.
 class FeedbackOSOptions extends Equatable {
@@ -29,7 +28,7 @@ class FeedbackOSOptions extends Equatable {
   /// Defaults to 4 seconds.
   final Duration threadPollingInterval;
 
-  FeedbackOSOptions({
+  const FeedbackOSOptions({
     this.connectTimeout = const Duration(seconds: 15),
     this.receiveTimeout = const Duration(seconds: 15),
     this.debugLogging = false,
