@@ -119,7 +119,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Thanks, we got it'), findsOneWidget);
-      expect(find.byKey(const Key('feedback_success_done_button')),
+      expect(find.byKey(const Key('feedback_back_to_app_button')),
           findsOneWidget);
     });
 

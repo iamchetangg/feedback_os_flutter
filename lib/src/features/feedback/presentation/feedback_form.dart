@@ -418,19 +418,18 @@ class _ScreenshotAttachmentsSection extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
-        Container(
+        SizedBox(
           width: double.infinity,
           child: DottedBorder(
             // decoration: BoxDecoration(border: Border.all(style: BorderStyle.solid)),
             options: RoundedRectDottedBorderOptions(
-              dashPattern: [10, 5],
+              dashPattern: const [10, 5],
               strokeWidth: 2,
               color: theme.borderMutedColor.withAlpha(100),
-              radius: Radius.circular(12),
-              padding: EdgeInsets.all(10),
+              radius: const Radius.circular(12),
+              padding: const EdgeInsets.all(10),
             ),
-            child: Container(
-              child: Row(
+            child: Row(
                 mainAxisAlignment: attachments.isEmpty
                     ? MainAxisAlignment.center
                     : MainAxisAlignment.start,
@@ -463,7 +462,6 @@ class _ScreenshotAttachmentsSection extends StatelessWidget {
               ),
             ),
           ),
-        ),
       ],
     );
   }
