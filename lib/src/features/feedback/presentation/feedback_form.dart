@@ -34,140 +34,155 @@ class FeedbackFormSheet extends StatelessWidget {
     final theme = FeedbackOSTheme.of(context);
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.backgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
-      ),
-      padding: EdgeInsets.only(bottom: bottomInset),
-      child: SafeArea(
-        top: false,
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: BlocConsumer<FeedbackBloc, FeedbackState>(
-              listener: (context, state) {},
-              builder: (context, state) {
-                if (state.isSuccess) {
-                  return _SuccessView(
-                    result: state.submissionResult,
-                    state: state,
-                    onClose: () {
-                      onDismiss?.call();
-                      Navigator.of(context, rootNavigator: true)
-                          .pop(state.submissionResult);
-                    },
-                    onViewMyRequests: () {
-                      Navigator.of(context, rootNavigator: true)
-                          .pop(state.submissionResult);
-                      onViewMyRequests?.call();
-                    },
-                  );
-                }
+    return PopScope(
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) {
+          onDismiss?.call();
+          FocusScope.of(context).unfocus();
+        }
+      },
+      child: GestureDetector(
+        onTap: () {
+          FocusScope.of(context).unfocus();
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            color: theme.backgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+          ),
+          padding: EdgeInsets.only(bottom: bottomInset),
+          child: SafeArea(
+            top: false,
+            child: SingleChildScrollView(
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: BlocConsumer<FeedbackBloc, FeedbackState>(
+                  listener: (context, state) {},
+                  builder: (context, state) {
+                    if (state.isSuccess) {
+                      return _SuccessView(
+                        result: state.submissionResult,
+                        state: state,
+                        onClose: () {
+                          onDismiss?.call();
+                          Navigator.of(context, rootNavigator: true)
+                              .pop(state.submissionResult);
+                        },
+                        onViewMyRequests: () {
+                          Navigator.of(context, rootNavigator: true)
+                              .pop(state.submissionResult);
+                          onViewMyRequests?.call();
+                        },
+                      );
+                    }
 
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Top drag grab handle
-                    Center(
-                      child: Container(
-                        width: 36,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: theme.borderMutedColor,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-
-                    // Header row: New request & Close X
-                    Row(
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Expanded(
-                          child: Text(
-                            'New request',
-                            style: AppStyles.titleHeader
-                                .copyWith(color: theme.titleColor),
+                        // Top drag grab handle
+                        Center(
+                          child: Container(
+                            width: 36,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: theme.borderMutedColor,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
                           ),
                         ),
-                        IconButton(
-                          key: const Key('feedback_close_button'),
-                          icon: Icon(Icons.close,
-                              color: theme.secondaryTextColor),
-                          onPressed: () {
-                            onDismiss?.call();
-                            Navigator.of(context, rootNavigator: true).pop();
-                          },
-                          splashRadius: 20,
+                        const SizedBox(height: 8),
+
+                        // Header row: New request & Close X
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'New request',
+                                style: AppStyles.titleHeader
+                                    .copyWith(color: theme.titleColor),
+                              ),
+                            ),
+                            IconButton(
+                              key: const Key('feedback_close_button'),
+                              icon: Icon(Icons.close,
+                                  color: theme.secondaryTextColor),
+                              onPressed: () {
+                                onDismiss?.call();
+                                Navigator.of(context, rootNavigator: true)
+                                    .pop();
+                              },
+                              splashRadius: 20,
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
+                        const SizedBox(height: 12),
 
-                    // Section 1: What's this about?
-                    if (shouldShowCategory) ...[
-                      Text(
-                        "What's this about?",
-                        style: AppStyles.labelMedium
-                            .copyWith(color: theme.secondaryTextColor),
-                      ),
-                      const SizedBox(height: 8),
-                      const _TypeCards(),
-                      const SizedBox(height: 16),
-                    ],
+                        // Section 1: What's this about?
+                        if (shouldShowCategory) ...[
+                          Text(
+                            "What's this about?",
+                            style: AppStyles.labelMedium
+                                .copyWith(color: theme.secondaryTextColor),
+                          ),
+                          const SizedBox(height: 8),
+                          const _TypeCards(),
+                          const SizedBox(height: 16),
+                        ],
 
-                    // Section 2: Title
-                    Text(
-                      'Title',
-                      style: AppStyles.labelMedium
-                          .copyWith(color: theme.secondaryTextColor),
-                    ),
-                    const SizedBox(height: 6),
-                    const _TitleField(),
-                    const SizedBox(height: 16),
-
-                    // Section 3: Details (Optional)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
+                        // Section 2: Title
                         Text(
-                          'Details',
+                          'Title',
                           style: AppStyles.labelMedium
                               .copyWith(color: theme.secondaryTextColor),
                         ),
-                        Text(
-                          'Optional',
-                          style: AppStyles.bodySmall
-                              .copyWith(color: theme.mutedTextColor),
+                        const SizedBox(height: 6),
+                        const _TitleField(),
+                        const SizedBox(height: 16),
+
+                        // Section 3: Details (Optional)
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Details',
+                              style: AppStyles.labelMedium
+                                  .copyWith(color: theme.secondaryTextColor),
+                            ),
+                            Text(
+                              'Optional',
+                              style: AppStyles.bodySmall
+                                  .copyWith(color: theme.mutedTextColor),
+                            ),
+                          ],
                         ),
+                        const SizedBox(height: 6),
+                        const _DescriptionField(),
+                        const SizedBox(height: 16),
+
+                        // Section 4: Screenshots
+                        _ScreenshotAttachmentsSection(
+                          onPickAttachment: onPickAttachment,
+                        ),
+
+                        if (state.errorMessage != null) ...[
+                          const SizedBox(height: 12),
+                          Text(
+                            state.errorMessage!,
+                            style: AppStyles.error
+                                .copyWith(color: theme.errorColor),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+
+                        const SizedBox(height: 24),
+                        const _SubmitButton(),
                       ],
-                    ),
-                    const SizedBox(height: 6),
-                    const _DescriptionField(),
-                    const SizedBox(height: 16),
-
-                    // Section 4: Screenshots
-                    _ScreenshotAttachmentsSection(
-                      onPickAttachment: onPickAttachment,
-                    ),
-
-                    if (state.errorMessage != null) ...[
-                      const SizedBox(height: 12),
-                      Text(
-                        state.errorMessage!,
-                        style:
-                            AppStyles.error.copyWith(color: theme.errorColor),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-
-                    const SizedBox(height: 24),
-                    const _SubmitButton(),
-                  ],
-                );
-              },
+                    );
+                  },
+                ),
+              ),
             ),
           ),
         ),
@@ -430,38 +445,38 @@ class _ScreenshotAttachmentsSection extends StatelessWidget {
               padding: const EdgeInsets.all(10),
             ),
             child: Row(
-                mainAxisAlignment: attachments.isEmpty
-                    ? MainAxisAlignment.center
-                    : MainAxisAlignment.start,
-                children: [
-                  for (int i = 0; i < attachments.length; i++)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: _AttachmentThumbnail(
-                        index: i,
-                        attachment: attachments[i],
-                      ),
+              mainAxisAlignment: attachments.isEmpty
+                  ? MainAxisAlignment.center
+                  : MainAxisAlignment.start,
+              children: [
+                for (int i = 0; i < attachments.length; i++)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: _AttachmentThumbnail(
+                      index: i,
+                      attachment: attachments[i],
                     ),
-                  if (canAdd)
-                    _AddAttachmentButton(
-                      onTap: () async {
-                        final picked = await picker();
-                        if (picked != null && context.mounted) {
-                          final compressed = ImageCompressor.compressAttachment(
-                            bytes: picked.bytes,
-                            fileName: picked.fileName,
-                            localFilePath: picked.localFilePath,
-                          );
-                          context
-                              .read<FeedbackBloc>()
-                              .add(FeedbackAttachmentAdded(compressed));
-                        }
-                      },
-                    ),
-                ],
-              ),
+                  ),
+                if (canAdd)
+                  _AddAttachmentButton(
+                    onTap: () async {
+                      final picked = await picker();
+                      if (picked != null && context.mounted) {
+                        final compressed = ImageCompressor.compressAttachment(
+                          bytes: picked.bytes,
+                          fileName: picked.fileName,
+                          localFilePath: picked.localFilePath,
+                        );
+                        context
+                            .read<FeedbackBloc>()
+                            .add(FeedbackAttachmentAdded(compressed));
+                      }
+                    },
+                  ),
+              ],
             ),
           ),
+        ),
       ],
     );
   }
