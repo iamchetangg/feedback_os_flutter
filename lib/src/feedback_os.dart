@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show Platform;
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
@@ -616,12 +618,26 @@ class FeedbackOS {
     final device =
         customDeviceInfo ?? await _deviceInfoProvider!.getDeviceInfo();
 
+    String? platform;
+    if (!kIsWeb) {
+      if (Platform.isIOS) {
+        platform = 'ios';
+      } else if (Platform.isAndroid) {
+        platform = 'android';
+      } else if (Platform.isMacOS) {
+        platform = 'macos';
+      }
+    } else {
+      platform = 'web';
+    }
+
     final submission = FeedbackSubmission(
       clientSubmissionId: submissionId,
       type: type,
       title: title,
       description: description,
       category: category,
+      platform: platform,
       device: device,
       screenshotUploadIds: effectiveUploadIds,
     );

@@ -19,6 +19,9 @@ class FeedbackSubmission extends Equatable {
   /// Optional category (e.g., 'UX', 'Billing'). Max 50 chars.
   final String? category;
 
+  /// Optional platform identifier (e.g. 'ios', 'android', 'macos', 'web').
+  final String? platform;
+
   /// Platform device metadata.
   final FeedbackDeviceInfo device;
 
@@ -31,6 +34,7 @@ class FeedbackSubmission extends Equatable {
     required this.title,
     this.description = '',
     this.category,
+    this.platform,
     required this.device,
     this.screenshotUploadIds = const [],
   });
@@ -60,6 +64,7 @@ class FeedbackSubmission extends Equatable {
         title,
         description,
         category,
+        platform,
         device,
         screenshotUploadIds,
       ];

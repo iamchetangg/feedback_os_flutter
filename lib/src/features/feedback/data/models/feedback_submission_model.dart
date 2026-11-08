@@ -9,6 +9,7 @@ class FeedbackSubmissionModel extends FeedbackSubmission {
     required super.title,
     super.description = '',
     super.category,
+    super.platform,
     required super.device,
     super.screenshotUploadIds = const [],
   });
@@ -21,6 +22,7 @@ class FeedbackSubmissionModel extends FeedbackSubmission {
       title: entity.title.trim(),
       description: entity.description.trim(),
       category: entity.category?.trim(),
+      platform: entity.platform?.trim(),
       device: FeedbackDeviceInfoModel.fromEntity(entity.device),
       screenshotUploadIds: entity.screenshotUploadIds,
     );
@@ -33,6 +35,7 @@ class FeedbackSubmissionModel extends FeedbackSubmission {
       title: json['title'] as String,
       description: json['description'] as String? ?? '',
       category: json['category'] as String?,
+      platform: json['platform'] as String?,
       device: FeedbackDeviceInfoModel.fromJson(
         json['device'] as Map<String, dynamic>,
       ),
@@ -50,6 +53,7 @@ class FeedbackSubmissionModel extends FeedbackSubmission {
       'title': title,
       'description': description,
       if (category != null && category!.isNotEmpty) 'category': category,
+      if (platform != null && platform!.isNotEmpty) 'platform': platform,
       'device': FeedbackDeviceInfoModel.fromEntity(device).toJson(),
       'screenshot_upload_ids': screenshotUploadIds,
     };
