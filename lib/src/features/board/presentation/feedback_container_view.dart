@@ -39,6 +39,26 @@ class _FeedbackContainerViewState extends State<FeedbackContainerView> {
   }
 
   Future<void> _openThread(String itemId) async {
+    final boardState = context.read<BoardBloc>().state;
+    final boardItem =
+        boardState.items.where((i) => i.id == itemId).firstOrNull;
+    if (boardItem != null && !boardItem.isMine) {
+      return;
+    }
+    final roadmap = boardState.roadmap;
+    if (roadmap != null) {
+      final allRoadmapItems = [
+        ...roadmap.planned,
+        ...roadmap.inProgress,
+        ...roadmap.shipped,
+      ];
+      final roadmapItem =
+          allRoadmapItems.where((i) => i.id == itemId).firstOrNull;
+      if (roadmapItem != null && !roadmapItem.isMine) {
+        return;
+      }
+    }
+
     final threadsBloc = context.read<ThreadsBloc>();
     await FeedbackOS.instance.openThreadDetail(
       context: context,

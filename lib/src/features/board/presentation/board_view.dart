@@ -276,7 +276,11 @@ class BoardView extends StatelessWidget {
         item.replyCount == 1 ? '1 reply' : '${item.replyCount} replies';
 
     return GestureDetector(
-      onTap: () => onItemTap?.call(item.id),
+      onTap: () {
+        if (!item.isMine) return;
+        onItemTap?.call(item.id);
+      },
+      behavior: HitTestBehavior.opaque,
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(

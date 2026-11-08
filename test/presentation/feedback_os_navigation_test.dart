@@ -362,6 +362,161 @@ void main() {
       // "New reply" badge is gone!
       expect(find.text('New reply'), findsNothing);
     });
+
+    testWidgets(
+        'clicking a board item in FeedbackContainerView opens thread detail only if currentUser owns it',
+        (tester) async {
+      when(
+        () => mockHttpClient.get<Map<String, dynamic>>(
+          ApiEndpoints.board,
+          queryParameters: any(named: 'queryParameters'),
+          cancelToken: any(named: 'cancelToken'),
+        ),
+      ).thenAnswer(
+        (_) async => Response(
+          requestOptions: RequestOptions(path: ApiEndpoints.board),
+          data: {
+            'data': [
+              {
+                'id': 'item_not_mine',
+                'title': 'Public Board Item Not Mine',
+                'description': 'Someone elses request',
+                'status': 'planned',
+                'vote_count': 10,
+                'has_voted': false,
+                'is_mine': false,
+                'created_at': '2026-10-15T00:00:00.000Z',
+              },
+              {
+                'id': 'item_nav_1',
+                'title': 'My Board Item',
+                'description': 'My request',
+                'status': 'planned',
+                'vote_count': 3,
+                'has_voted': false,
+                'is_mine': true,
+                'created_at': '2026-10-15T00:00:00.000Z',
+              },
+            ],
+            'next_cursor': null,
+          },
+          statusCode: 200,
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                return ElevatedButton(
+                  key: const Key('open_board_container_btn'),
+                  onPressed: () =>
+                      FeedbackOS.instance.openBoard(context: context),
+                  child: const Text('Open Board'),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byKey(const Key('open_board_container_btn')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(BoardView), findsOneWidget);
+      expect(find.text('Public Board Item Not Mine'), findsOneWidget);
+      expect(find.text('My Board Item'), findsOneWidget);
+
+      // Tap unowned board item -> ThreadDetailView should NOT open
+      await tester.tap(find.text('Public Board Item Not Mine'));
+      await tester.pumpAndSettle();
+      expect(find.byType(ThreadDetailView), findsNothing);
+      expect(find.byType(BoardView), findsOneWidget);
+
+      // Tap owned board item -> ThreadDetailView opens
+      await tester.tap(find.text('My Board Item'));
+      await tester.pumpAndSettle();
+      expect(find.byType(ThreadDetailView), findsOneWidget);
+    });
+
+    testWidgets(
+        'clicking a roadmap item in FeedbackContainerView opens thread detail only if currentUser owns it',
+        (tester) async {
+      when(
+        () => mockHttpClient.get<Map<String, dynamic>>(
+          ApiEndpoints.roadmap,
+          queryParameters: any(named: 'queryParameters'),
+          cancelToken: any(named: 'cancelToken'),
+        ),
+      ).thenAnswer(
+        (_) async => Response(
+          requestOptions: RequestOptions(path: ApiEndpoints.roadmap),
+          data: {
+            'planned': [
+              {
+                'id': 'r_not_mine',
+                'title': 'Public Roadmap Not Mine',
+                'description': 'Roadmap feature by someone else',
+                'status': 'planned',
+                'vote_count': 15,
+                'has_voted': false,
+                'is_mine': false,
+                'created_at': '2026-10-15T00:00:00.000Z',
+              },
+              {
+                'id': 'item_nav_1',
+                'title': 'My Roadmap Feature',
+                'description': 'My planned request',
+                'status': 'planned',
+                'vote_count': 7,
+                'has_voted': false,
+                'is_mine': true,
+                'created_at': '2026-10-15T00:00:00.000Z',
+              },
+            ],
+            'in_progress': [],
+            'shipped': [],
+          },
+          statusCode: 200,
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                return ElevatedButton(
+                  key: const Key('open_roadmap_container_btn'),
+                  onPressed: () =>
+                      FeedbackOS.instance.openRoadmap(context: context),
+                  child: const Text('Open Roadmap'),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byKey(const Key('open_roadmap_container_btn')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(RoadmapView), findsOneWidget);
+      expect(find.text('Public Roadmap Not Mine'), findsOneWidget);
+      expect(find.text('My Roadmap Feature'), findsOneWidget);
+
+      // Tap unowned roadmap item -> ThreadDetailView should NOT open
+      await tester.tap(find.text('Public Roadmap Not Mine'));
+      await tester.pumpAndSettle();
+      expect(find.byType(ThreadDetailView), findsNothing);
+      expect(find.byType(RoadmapView), findsOneWidget);
+
+      // Tap owned roadmap item -> ThreadDetailView opens
+      await tester.tap(find.text('My Roadmap Feature'));
+      await tester.pumpAndSettle();
+      expect(find.byType(ThreadDetailView), findsOneWidget);
+    });
   });
 }
 

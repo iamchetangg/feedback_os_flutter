@@ -177,5 +177,70 @@ void main() {
       expect(find.byType(RoadmapView), findsNothing);
       expect(find.byKey(const Key('push_roadmap_btn')), findsOneWidget);
     });
+
+    testWidgets(
+        'tapping a roadmap item only invokes onItemTap if currentUser owns it (isMine is true)',
+        (tester) async {
+      String? tappedItemId;
+
+      final notMyRoadmapItem = BoardItem(
+        id: 'r_not_mine',
+        title: 'Community Planned Feature',
+        description: 'Not mine',
+        status: 'planned',
+        voteCount: 12,
+        hasVoted: false,
+        isMine: false,
+        createdAt: DateTime.now(),
+      );
+
+      final myRoadmapItem = BoardItem(
+        id: 'r_mine',
+        title: 'My Planned Feature',
+        description: 'Mine',
+        status: 'planned',
+        voteCount: 4,
+        hasVoted: false,
+        isMine: true,
+        createdAt: DateTime.now(),
+      );
+
+      bloc = BoardBloc(
+        getBoardUseCase: mockGetBoard,
+        getRoadmapUseCase: mockGetRoadmap,
+        voteItemUseCase: mockVote,
+        unvoteItemUseCase: mockUnvote,
+        initialState: BoardState(
+          status: BoardStatus.success,
+          roadmap: Roadmap(
+            planned: [notMyRoadmapItem, myRoadmapItem],
+            inProgress: const [],
+            shipped: const [],
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: BlocProvider<BoardBloc>.value(
+            value: bloc,
+            child: RoadmapView(
+              onItemTap: (id) => tappedItemId = id,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Tap unowned roadmap item
+      await tester.tap(find.text('Community Planned Feature'));
+      await tester.pumpAndSettle();
+      expect(tappedItemId, isNull);
+
+      // Tap owned roadmap item
+      await tester.tap(find.text('My Planned Feature'));
+      await tester.pumpAndSettle();
+      expect(tappedItemId, equals('r_mine'));
+    });
   });
 }

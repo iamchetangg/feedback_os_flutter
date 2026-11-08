@@ -264,7 +264,11 @@ class _RoadmapViewState extends State<RoadmapView> {
     FeedbackOSTheme theme,
   ) {
     return GestureDetector(
-      onTap: () => widget.onItemTap?.call(item.id),
+      onTap: () {
+        if (!item.isMine) return;
+        widget.onItemTap?.call(item.id);
+      },
+      behavior: HitTestBehavior.opaque,
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(

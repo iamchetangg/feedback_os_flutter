@@ -165,5 +165,65 @@ void main() {
       expect(find.byType(BoardView), findsNothing);
       expect(find.byKey(const Key('push_board_btn')), findsOneWidget);
     });
+
+    testWidgets('tapping an item only invokes onItemTap if currentUser owns it (isMine is true)',
+        (tester) async {
+      String? tappedItemId;
+
+      final notMyItem = BoardItem(
+        id: 'item_others',
+        title: 'Others Request',
+        description: 'Others desc',
+        status: 'open',
+        voteCount: 3,
+        hasVoted: false,
+        isMine: false,
+        createdAt: DateTime.now(),
+      );
+
+      final myItem = BoardItem(
+        id: 'item_mine',
+        title: 'My Request',
+        description: 'My desc',
+        status: 'open',
+        voteCount: 1,
+        hasVoted: false,
+        isMine: true,
+        createdAt: DateTime.now(),
+      );
+
+      bloc = BoardBloc(
+        getBoardUseCase: mockGetBoard,
+        getRoadmapUseCase: mockGetRoadmap,
+        voteItemUseCase: mockVote,
+        unvoteItemUseCase: mockUnvote,
+        initialState: BoardState(
+          status: BoardStatus.success,
+          items: [notMyItem, myItem],
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: BlocProvider<BoardBloc>.value(
+            value: bloc,
+            child: BoardView(
+              onItemTap: (id) => tappedItemId = id,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Tap unowned item
+      await tester.tap(find.text('Others Request'));
+      await tester.pumpAndSettle();
+      expect(tappedItemId, isNull);
+
+      // Tap owned item
+      await tester.tap(find.text('My Request'));
+      await tester.pumpAndSettle();
+      expect(tappedItemId, equals('item_mine'));
+    });
   });
 }
