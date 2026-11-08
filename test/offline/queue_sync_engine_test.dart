@@ -50,7 +50,7 @@ void main() {
       engine = QueueSyncEngine(
         store: store,
         remoteDataSource: mockRemote,
-        options: FeedbackOSOptions(queueItemTtl: const Duration(days: 7)),
+        options: const FeedbackOSOptions(queueItemTtl: Duration(days: 7)),
         appScope: testScope,
         getActiveUserId: () async => activeUserId,
         setActiveUserId: (id) async => activeUserId = id,
@@ -212,7 +212,7 @@ void main() {
       final engineWithUploads = QueueSyncEngine(
         store: store,
         remoteDataSource: mockRemote,
-        options: FeedbackOSOptions(),
+        options: const FeedbackOSOptions(),
         appScope: testScope,
         getActiveUserId: () async => activeUserId,
         setActiveUserId: (id) async => activeUserId = id,

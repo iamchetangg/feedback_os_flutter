@@ -251,7 +251,7 @@ class FeedbackOS {
     }
 
     _publishableKey = sanitizedKey;
-    _options = options ?? FeedbackOSOptions();
+    _options = options ?? const FeedbackOSOptions();
     FeedbackOSTheme.current = _options!.theme;
     _deviceIdStore = deviceIdStore ?? SecureDeviceIdStore();
     _deviceInfoProvider = deviceInfoProvider ?? DefaultDeviceInfoProvider();

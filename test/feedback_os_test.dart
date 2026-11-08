@@ -357,7 +357,7 @@ void main() {
         submissionStore: inMemorySubmissionStore,
         httpClient: mockHttpClient,
         deviceInfoProvider: const StaticDeviceInfoProvider(),
-        options: FeedbackOSOptions(maxOfflineQueueSize: 1),
+        options: const FeedbackOSOptions(maxOfflineQueueSize: 1),
       );
 
       when(

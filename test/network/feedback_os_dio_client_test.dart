@@ -21,7 +21,7 @@ void main() {
     client = FeedbackOsDioClient(
       publishableKey: testKey,
       getDeviceId: () async => testDeviceId,
-      options: FeedbackOSOptions.staging(),
+      options: const FeedbackOSOptions(),
       customDio: mockDio,
     );
   });
