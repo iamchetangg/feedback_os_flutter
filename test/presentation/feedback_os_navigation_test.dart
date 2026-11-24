@@ -3,6 +3,7 @@ import 'package:feedback_os_flutter/feedback_os_flutter.dart';
 import 'package:feedback_os_flutter/src/core/network/api_endpoints.dart';
 import 'package:feedback_os_flutter/src/core/network/feedback_os_dio_client.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -267,6 +268,41 @@ void main() {
 
       expect(find.byType(ThreadDetailView), findsOneWidget);
       expect(find.text('Your request'), findsOneWidget);
+    });
+
+    testWidgets(
+        'popping openThreadDetail disposes the view before closing its bloc',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => ElevatedButton(
+                key: const Key('open_thread_btn'),
+                onPressed: () => FeedbackOS.instance.openThreadDetail(
+                  context: context,
+                  itemId: 'item_nav_1',
+                ),
+                child: const Text('Open Thread'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.byKey(const Key('open_thread_btn')));
+      await tester.pumpAndSettle();
+      final bloc = BlocProvider.of<ThreadsBloc>(
+        tester.element(find.byType(ThreadDetailView)),
+      );
+
+      tester.state<NavigatorState>(find.byType(Navigator)).pop();
+      await tester.pumpAndSettle();
+
+      // Regression: ThreadDetailView.dispose used to add to an already-closed
+      // bloc ("Cannot add new events after calling close").
+      expect(tester.takeException(), isNull);
+      expect(find.byType(ThreadDetailView), findsNothing);
+      expect(bloc.isClosed, isTrue);
     });
 
     testWidgets(

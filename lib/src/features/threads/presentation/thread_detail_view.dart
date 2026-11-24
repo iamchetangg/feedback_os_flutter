@@ -55,6 +55,7 @@ class _ThreadDetailViewState extends State<ThreadDetailView>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (_threadsBloc.isClosed) return;
     if (state == AppLifecycleState.resumed) {
       _threadsBloc.add(
         ThreadDetailRefreshed(widget.itemId, isSilent: true),
@@ -75,7 +76,8 @@ class _ThreadDetailViewState extends State<ThreadDetailView>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _threadsBloc.add(const ThreadPollingStopped());
+    // The bloc may be owned by a caller that already closed it.
+    if (!_threadsBloc.isClosed) _threadsBloc.add(const ThreadPollingStopped());
     _replyController.dispose();
     super.dispose();
   }

@@ -1101,16 +1101,26 @@ class FeedbackOS {
     final route = MaterialPageRoute<void>(
       settings: const RouteSettings(name: 'FeedbackOS_Container'),
       builder: (routeContext) {
-        return FeedbackOSThemeProvider(
-          theme: theme,
-          child: MultiBlocProvider(
-            providers: [
-              BlocProvider<BoardBloc>.value(value: boardBloc),
-              BlocProvider<ThreadsBloc>.value(value: threadsBloc),
-            ],
-            child: FeedbackContainerView(
-              initialTabIndex: initialTabIndex,
-              onBack: onBack ?? () => Navigator.of(routeContext).pop(),
+        return _CloseOnDispose(
+          // Close blocs the SDK created once the route's widgets are gone, so
+          // their live-event subscriptions end. Closing right after `push`
+          // returns is too early: the views are disposed after the pop
+          // animation and still send events to the bloc.
+          onDispose: () {
+            if (customBoardBloc == null) unawaited(boardBloc.close());
+            if (customThreadsBloc == null) unawaited(threadsBloc.close());
+          },
+          child: FeedbackOSThemeProvider(
+            theme: theme,
+            child: MultiBlocProvider(
+              providers: [
+                BlocProvider<BoardBloc>.value(value: boardBloc),
+                BlocProvider<ThreadsBloc>.value(value: threadsBloc),
+              ],
+              child: FeedbackContainerView(
+                initialTabIndex: initialTabIndex,
+                onBack: onBack ?? () => Navigator.of(routeContext).pop(),
+              ),
             ),
           ),
         );
@@ -1122,10 +1132,6 @@ class FeedbackOS {
     } else {
       await Navigator.of(context, rootNavigator: true).push(route);
     }
-
-    // Close blocs the SDK created so their live-event subscriptions end.
-    if (customBoardBloc == null) await boardBloc.close();
-    if (customThreadsBloc == null) await threadsBloc.close();
   }
 
   /// Opens the [RoadmapView] on the unified container screen (Tab 1: Roadmap).
@@ -1231,23 +1237,26 @@ class FeedbackOS {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (routeContext) {
-          return FeedbackOSThemeProvider(
-            theme: theme,
-            child: BlocProvider<ThreadsBloc>.value(
-              value: bloc,
-              child: ThreadDetailView(
-                itemId: itemId,
-                onBack: onBack ?? () => Navigator.of(routeContext).pop(),
-                pollingInterval: effectiveInterval,
+          return _CloseOnDispose(
+            // See openContainer: close only after ThreadDetailView is disposed.
+            onDispose: () {
+              if (customBloc == null) unawaited(bloc.close());
+            },
+            child: FeedbackOSThemeProvider(
+              theme: theme,
+              child: BlocProvider<ThreadsBloc>.value(
+                value: bloc,
+                child: ThreadDetailView(
+                  itemId: itemId,
+                  onBack: onBack ?? () => Navigator.of(routeContext).pop(),
+                  pollingInterval: effectiveInterval,
+                ),
               ),
             ),
           );
         },
       ),
     );
-
-    // Close the bloc the SDK created so its live-event subscription ends.
-    if (customBloc == null) await bloc.close();
   }
 
   /// Internal factory to instantiate a [BoardBloc] configured with SDK dependencies.
@@ -1370,4 +1379,28 @@ class FeedbackOS {
       _ => FeedbackOsServerException(failure.message),
     };
   }
+}
+
+/// Runs [onDispose] when this subtree is unmounted. Flutter unmounts children
+/// before their parents, so this fires after every view inside [child] has run
+/// its own `dispose()`.
+class _CloseOnDispose extends StatefulWidget {
+  final VoidCallback onDispose;
+  final Widget child;
+
+  const _CloseOnDispose({required this.onDispose, required this.child});
+
+  @override
+  State<_CloseOnDispose> createState() => _CloseOnDisposeState();
+}
+
+class _CloseOnDisposeState extends State<_CloseOnDispose> {
+  @override
+  void dispose() {
+    widget.onDispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
