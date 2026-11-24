@@ -120,7 +120,7 @@ void main() {
     );
   });
 
-  test('exposes live events and bumps unreadCount', () async {
+  test('exposes live events and resyncs unreadCount', () async {
     await init();
     final received = <FeedbackOSEvent>[];
     final sub = FeedbackOS.instance.events.listen(received.add);
@@ -136,7 +136,9 @@ void main() {
     await pumpEventQueue();
 
     expect(received.single, isA<ReplyReceived>());
-    expect(FeedbackOS.instance.unreadCount.value, 3);
+    // unreadCount is re-fetched from the server after a short debounce.
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+    expect(FeedbackOS.instance.unreadCount.value, 2);
     await sub.cancel();
   });
 

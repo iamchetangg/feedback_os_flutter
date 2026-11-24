@@ -12,8 +12,9 @@ import '../domain/entities/feedback_os_event.dart';
 ///   `inactive` (e.g. a system dialog) keeps the socket open.
 /// - Reconciles [unreadCount] with the server on every (re)connect, because
 ///   missed events are not replayed.
-/// - Optimistically increments [unreadCount] on events, then resyncs it
-///   shortly after (debounced) so it never drifts from the server value.
+/// - Re-fetches [unreadCount] from the server shortly after events (debounced).
+///   The server counts unread *threads*, so a local +1 per event would
+///   overcount when a thread that is already unread gets another reply.
 class RealtimeController with WidgetsBindingObserver {
   final RealtimeClient _client;
   final Future<int> Function() _fetchUnreadCount;
@@ -36,7 +37,7 @@ class RealtimeController with WidgetsBindingObserver {
     required ValueNotifier<bool> isConnected,
     required void Function(FeedbackOSEvent event) onEvent,
     WidgetsBinding? binding,
-    Duration reconcileDebounce = const Duration(seconds: 2),
+    Duration reconcileDebounce = const Duration(milliseconds: 300),
     void Function(String message)? log,
   })  : _client = client,
         _fetchUnreadCount = fetchUnreadCount,
@@ -115,7 +116,6 @@ class RealtimeController with WidgetsBindingObserver {
 
   void _handleEvent(FeedbackOSEvent event) {
     if (_disposed) return;
-    _unreadCount.value = _unreadCount.value + 1;
     _onEvent(event);
     _reconcileTimer?.cancel();
     _reconcileTimer = Timer(_reconcileDebounce, () {

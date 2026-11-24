@@ -106,7 +106,7 @@ void main() {
       });
     });
 
-    test('forwards events, increments unread, then resyncs (debounced)', () {
+    test('forwards events, then resyncs unread from the server (debounced)', () {
       fakeAsync((async) {
         final controller = buildController()..start();
         async.flushMicrotasks();
@@ -122,10 +122,10 @@ void main() {
         });
         async.flushMicrotasks();
         expect(forwarded.single, isA<ReplyReceived>());
-        expect(unread.value, 4);
+        expect(unread.value, 3); // no local guess; the server decides
 
         serverUnread = 4;
-        async.elapse(const Duration(seconds: 2));
+        async.elapse(const Duration(milliseconds: 300));
         expect(fetchCalls, 2);
         expect(unread.value, 4);
 

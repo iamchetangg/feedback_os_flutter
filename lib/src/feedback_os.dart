@@ -203,7 +203,8 @@ class FeedbackOS {
   /// Live unread replies/updates count, suitable for a badge.
   ///
   /// Reconciled with the server on every (re)connect and after a thread is
-  /// read; incremented as live events arrive. Also updated whenever
+  /// read, and re-fetched shortly after each live event (it counts unread
+  /// threads, not replies). Also updated whenever
   /// [getUnreadCount] is called.
   ValueListenable<int> get unreadCount => _unreadCountNotifier;
 
