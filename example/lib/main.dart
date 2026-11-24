@@ -6,10 +6,20 @@ import 'router/app_router.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize FeedbackOS SDK with staging options
+  // Optional API override for local testing, e.g.
+  //   --dart-define=FEEDBACKOS_BASE_URL=http://localhost:8787
+  //   --dart-define=FEEDBACKOS_BASE_URL=http://10.0.2.2:8787 (Android emulator)
+  const baseUrl = String.fromEnvironment('FEEDBACKOS_BASE_URL');
+
   await FeedbackOS.instance.initialize(
     publishableKey: const String.fromEnvironment('FEEDBACKOS_KEY'),
-    options: FeedbackOSOptions(),
+    options: FeedbackOSOptions(
+      baseUrl: baseUrl.isEmpty ? null : Uri.parse(baseUrl),
+      // Live notifications are on by default; also show the in-app banner.
+      showInAppNotificationBanner: true,
+      navigatorKey: rootNavigatorKey,
+      debugLogging: true,
+    ),
   );
 
   runApp(const FeedbackOsExampleApp());
@@ -203,10 +213,31 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 8),
             OutlinedButton.icon(
-              icon: const Icon(Icons.forum_outlined),
+              icon: ValueListenableBuilder<int>(
+                valueListenable: FeedbackOS.instance.unreadCount,
+                builder: (context, unread, _) => Badge(
+                  isLabelVisible: unread > 0,
+                  label: Text('$unread'),
+                  child: const Icon(Icons.forum_outlined),
+                ),
+              ),
               label: const Text('My Feedback Threads'),
               onPressed: () =>
                   FeedbackOS.instance.openFeedbackDashboard(context: context),
+            ),
+            const SizedBox(height: 4),
+            ValueListenableBuilder<bool>(
+              valueListenable: FeedbackOS.instance.isLiveConnected,
+              builder: (context, live, _) => Text(
+                live ? 'Live updates: connected' : 'Live updates: offline',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: live
+                      ? const Color(0xFF059669)
+                      : const Color(0xFF6B7280),
+                ),
+              ),
             ),
             const SizedBox(height: 24),
 

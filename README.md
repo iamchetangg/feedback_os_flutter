@@ -14,6 +14,7 @@ A production-minded, offline-first Flutter SDK for **[FeedbackOS](https://feedba
 - 🗳 **Community Board & Voting**: Paginated feature requests with optimistic upvoting and server confirmation rollback.
 - 🗺 **Product Roadmap**: Structured tabbed view of planned, in-progress, and shipped features.
 - 💬 **Feedback Threads & Messages**: Two-way discussions between users and your team with unread badge counters.
+- 🔔 **Live Notifications**: Creator replies and status changes pushed over a WebSocket, with a live unread count and an optional in-app banner.
 
 ---
 
@@ -46,7 +47,10 @@ void main() async {
       'FEEDBACKOS_KEY',
       defaultValue: 'fos_pk_live_your_key_here',
     ),
-    options: const FeedbackOSOptions(
+    // baseUrl is optional and defaults to https://api.feedbackos.dev.
+    // Point it at a local server for development, e.g.
+    // http://localhost:8787 (or http://10.0.2.2:8787 from the Android emulator).
+    options: FeedbackOSOptions(
       baseUrl: Uri.parse('https://api.feedbackos.dev'),
     ),
   );
@@ -203,9 +207,63 @@ BlocProvider<ThreadsBloc>.value(
 Check unread messages for a badge counter:
 
 ```dart
-final unreadCount = await FeedbackOS.instance.getUnreadCount();
-print('Unread replies: ${unreadCount.count}');
+final int unreadCount = await FeedbackOS.instance.getUnreadCount();
+print('Unread replies: $unreadCount');
 ```
+
+For a badge that updates by itself, use the live `FeedbackOS.instance.unreadCount` listenable (see [Live Notifications](#9-live-notifications)).
+
+### 9. Live Notifications
+
+When realtime is enabled for your project, the SDK keeps a WebSocket open (`/v1/sdk/me/stream`) while the app is in the foreground, so users see creator replies and status changes without opening the feedback screens. It is on by default (`liveNotifications: true`) and only connects if the server SDK config reports `realtime.enabled`. Older servers that don't send the field never get connection attempts.
+
+```dart
+// Stream of live events (broadcast; survives reconnects and identify()).
+final sub = FeedbackOS.instance.events.listen((event) {
+  switch (event) {
+    case ReplyReceived(:final itemId, :final authorName, :final preview):
+      print('New reply on $itemId from ${authorName ?? 'the team'}: $preview');
+    case StatusChanged(:final itemId, :final toStatus):
+      print('$itemId is now $toStatus');
+  }
+});
+
+// Badge driven by the live unread count.
+ValueListenableBuilder<int>(
+  valueListenable: FeedbackOS.instance.unreadCount,
+  builder: (context, unread, _) => Badge(
+    isLabelVisible: unread > 0,
+    label: Text('$unread'),
+    child: const Icon(Icons.forum_outlined),
+  ),
+);
+
+// Optional: connection state.
+FeedbackOS.instance.isLiveConnected; // ValueListenable<bool>
+```
+
+**In-app banner.** Set `showInAppNotificationBanner: true` to show a small banner at the top of the screen when an event arrives ("New reply" + preview, or "Status updated: shipped"). It dismisses itself after about 4 seconds, and tapping it opens the thread. Pass your app's `navigatorKey` (for example the one you give `MaterialApp` or `GoRouter`) so the SDK can find the overlay. Without one, it falls back to the app's root navigator. No banner is shown for a thread that is already open on screen.
+
+```dart
+final navigatorKey = GlobalKey<NavigatorState>();
+
+await FeedbackOS.instance.initialize(
+  publishableKey: 'fos_pk_...',
+  options: FeedbackOSOptions(
+    showInAppNotificationBanner: true,
+    navigatorKey: navigatorKey,
+  ),
+);
+
+MaterialApp(navigatorKey: navigatorKey, /* ... */);
+```
+
+**Behavior:**
+- The socket connects when the app is resumed and closes when it is paused or hidden. It sends a `ping` every 45 seconds and reconnects with exponential backoff and jitter (1 second up to 5 minutes, or a 5-minute wait if the server reports realtime as unavailable).
+- Missed events are not replayed. The unread count is reconciled with the server on every (re)connect and after a thread is read.
+- An open thread refreshes as soon as an event for it arrives. The `threadPollingInterval` short polling only runs as a fallback while the socket is disconnected or disabled.
+- The connection restarts on `identify()` and `clearIdentity()` and is torn down by `reset()`.
+- To opt out, set `liveNotifications: false`.
 
 ---
 

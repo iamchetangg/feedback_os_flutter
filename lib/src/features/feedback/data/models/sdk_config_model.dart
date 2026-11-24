@@ -24,6 +24,18 @@ class SdkRoadmapConfigModel extends SdkRoadmapConfig {
   Map<String, dynamic> toJson() => {'enabled': enabled};
 }
 
+class SdkRealtimeConfigModel extends SdkRealtimeConfig {
+  const SdkRealtimeConfigModel({required super.enabled});
+
+  factory SdkRealtimeConfigModel.fromJson(Map<String, dynamic> json) {
+    return SdkRealtimeConfigModel(
+      enabled: json['enabled'] as bool? ?? false,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {'enabled': enabled};
+}
+
 class SdkLimitsConfigModel extends SdkLimitsConfig {
   const SdkLimitsConfigModel({
     required super.maxScreenshots,
@@ -59,6 +71,7 @@ class SdkConfigModel extends SdkConfig {
     required super.categories,
     required super.statuses,
     required super.limits,
+    super.realtime = const SdkRealtimeConfigModel(enabled: false),
   });
 
   factory SdkConfigModel.fromJson(Map<String, dynamic> json) {
@@ -83,6 +96,9 @@ class SdkConfigModel extends SdkConfig {
       limits: SdkLimitsConfigModel.fromJson(
         (json['limits'] as Map<String, dynamic>?) ?? {},
       ),
+      realtime: SdkRealtimeConfigModel.fromJson(
+        (json['realtime'] as Map<String, dynamic>?) ?? {},
+      ),
     );
   }
 
@@ -95,5 +111,6 @@ class SdkConfigModel extends SdkConfig {
         'categories': categories,
         'statuses': statuses,
         'limits': (limits as SdkLimitsConfigModel).toJson(),
+        'realtime': {'enabled': realtime.enabled},
       };
 }

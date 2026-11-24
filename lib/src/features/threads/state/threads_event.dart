@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../../realtime/domain/entities/feedback_os_event.dart';
 
 abstract class ThreadsEvent extends Equatable {
   const ThreadsEvent();
@@ -9,6 +10,11 @@ abstract class ThreadsEvent extends Equatable {
 
 class MyItemsStarted extends ThreadsEvent {
   const MyItemsStarted();
+}
+
+/// Silently re-fetches "My requests" and the unread count (no loading state).
+class MyItemsRefreshed extends ThreadsEvent {
+  const MyItemsRefreshed();
 }
 
 class ThreadDetailStarted extends ThreadsEvent {
@@ -42,6 +48,11 @@ class ThreadReadMarked extends ThreadsEvent {
   List<Object?> get props => [itemId];
 }
 
+/// Starts watching [itemId] on the thread detail screen.
+///
+/// The thread refreshes on live events for [itemId]. Periodic polling every
+/// [interval] only runs while the live socket is disconnected or disabled,
+/// and starts/stops automatically as the connection state changes.
 class ThreadPollingStarted extends ThreadsEvent {
   final String itemId;
   final Duration? interval;
@@ -52,6 +63,7 @@ class ThreadPollingStarted extends ThreadsEvent {
   List<Object?> get props => [itemId, interval];
 }
 
+/// Stops watching the current thread (and any fallback polling).
 class ThreadPollingStopped extends ThreadsEvent {
   const ThreadPollingStopped();
 }
@@ -64,4 +76,24 @@ class ThreadDetailRefreshed extends ThreadsEvent {
 
   @override
   List<Object?> get props => [itemId, isSilent];
+}
+
+/// Internal: a live event arrived from the realtime channel.
+class ThreadRealtimeEventReceived extends ThreadsEvent {
+  final FeedbackOSEvent event;
+
+  const ThreadRealtimeEventReceived(this.event);
+
+  @override
+  List<Object?> get props => [event];
+}
+
+/// Internal: the realtime socket connected or disconnected.
+class ThreadRealtimeConnectionChanged extends ThreadsEvent {
+  final bool isConnected;
+
+  const ThreadRealtimeConnectionChanged(this.isConnected);
+
+  @override
+  List<Object?> get props => [isConnected];
 }

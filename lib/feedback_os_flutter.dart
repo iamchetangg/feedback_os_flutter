@@ -11,7 +11,12 @@ export 'core/theme/theme.dart' show FeedbackOSTheme, FeedbackOSThemeProvider;
 
 // Configuration & Ping Entities
 export 'src/features/feedback/domain/entities/sdk_config_entity.dart'
-    show SdkConfig, SdkBoardConfig, SdkRoadmapConfig, SdkLimitsConfig;
+    show
+        SdkConfig,
+        SdkBoardConfig,
+        SdkRoadmapConfig,
+        SdkLimitsConfig,
+        SdkRealtimeConfig;
 export 'src/features/feedback/domain/entities/sdk_ping_entity.dart'
     show SdkPingResult;
 
@@ -73,6 +78,7 @@ export 'src/features/threads/state/threads_event.dart'
     show
         ThreadsEvent,
         MyItemsStarted,
+        MyItemsRefreshed,
         ThreadDetailStarted,
         ThreadReplySubmitted,
         ThreadReadMarked,
@@ -81,6 +87,10 @@ export 'src/features/threads/state/threads_event.dart'
         ThreadDetailRefreshed;
 export 'src/features/threads/state/threads_state.dart'
     show ThreadsState, ThreadsStatus;
+
+// Live Notifications (realtime)
+export 'src/features/realtime/domain/entities/feedback_os_event.dart'
+    show FeedbackOSEvent, ReplyReceived, StatusChanged;
 
 // Offline Queue Entities & Contracts
 export 'src/features/feedback/domain/entities/queued_feedback.dart'

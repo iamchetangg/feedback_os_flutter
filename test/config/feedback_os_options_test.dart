@@ -69,5 +69,52 @@ void main() {
       );
       expect(opt1 == opt3, isFalse);
     });
+
+    test('live notification and base URL defaults', () {
+      const options = FeedbackOSOptions();
+      expect(options.baseUrl, isNull);
+      expect(
+        options.resolvedBaseUrl,
+        Uri.parse('https://api.feedbackos.dev'),
+      );
+      expect(options.liveNotifications, isTrue);
+      expect(options.showInAppNotificationBanner, isFalse);
+      expect(options.navigatorKey, isNull);
+    });
+
+    test('copyWith applies baseUrl and live notification fields', () {
+      final key = GlobalKey<NavigatorState>();
+      const options = FeedbackOSOptions();
+      final updated = options.copyWith(
+        baseUrl: Uri.parse('http://10.0.2.2:8787'),
+        liveNotifications: false,
+        showInAppNotificationBanner: true,
+        navigatorKey: key,
+      );
+
+      expect(updated.baseUrl, Uri.parse('http://10.0.2.2:8787'));
+      expect(updated.resolvedBaseUrl, Uri.parse('http://10.0.2.2:8787'));
+      expect(updated.liveNotifications, isFalse);
+      expect(updated.showInAppNotificationBanner, isTrue);
+      expect(updated.navigatorKey, same(key));
+
+      // Untouched fields are preserved.
+      final again = updated.copyWith(debugLogging: true);
+      expect(again.baseUrl, Uri.parse('http://10.0.2.2:8787'));
+      expect(again.liveNotifications, isFalse);
+      expect(again.showInAppNotificationBanner, isTrue);
+    });
+
+    test('props include baseUrl and live notification fields', () {
+      const base = FeedbackOSOptions();
+      expect(base == base.copyWith(baseUrl: Uri.parse('http://localhost:8787')),
+          isFalse);
+      expect(base == base.copyWith(liveNotifications: false), isFalse);
+      expect(base == base.copyWith(showInAppNotificationBanner: true), isFalse);
+      expect(
+        base.copyWith(baseUrl: Uri.parse('http://localhost:8787')),
+        equals(base.copyWith(baseUrl: Uri.parse('http://localhost:8787'))),
+      );
+    });
   });
 }

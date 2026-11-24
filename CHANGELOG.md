@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Live notifications** over a WebSocket (`GET /v1/sdk/me/stream`), gated by the new `realtime.enabled` field in the SDK config (treated as disabled when absent):
+  - `FeedbackOS.instance.events`: a broadcast `Stream<FeedbackOSEvent>` (`ReplyReceived`, `StatusChanged`) that survives reconnects.
+  - `FeedbackOS.instance.unreadCount` (`ValueListenable<int>`), reconciled with the server on every (re)connect and after threads are read.
+  - `FeedbackOS.instance.isLiveConnected` (`ValueListenable<bool>`).
+  - Lifecycle-aware connection (foreground only), a 45s text ping, and exponential backoff with jitter (1s to 5min; 5min on HTTP 503/401).
+  - Optional in-app banner (`showInAppNotificationBanner`, default `false`). Tapping it opens the thread.
+- `FeedbackOSOptions.baseUrl` is now honored by the HTTP client and the realtime socket (defaults to production), which allows testing against a local server.
+- New options: `liveNotifications` (default `true`), `showInAppNotificationBanner` (default `false`), `navigatorKey`.
+- `SdkRealtimeConfig` on `SdkConfig.realtime`, and a new `MyItemsRefreshed` threads event for silent list refreshes.
+
+### Changed
+- An open thread now refreshes on live events. The `threadPollingInterval` polling only runs while the live socket is disconnected or disabled.
+- Blocs created internally by `openContainer` / `openThreadDetail` are closed when their route is popped.
+
+### Fixed
+- `FeedbackOSOptions.copyWith(baseUrl:)` ignored its value.
+- README: `getUnreadCount()` returns an `int` (the snippet used `.count`).
+
 ## [0.1.1] - 2026-11-08
 
 ### Added

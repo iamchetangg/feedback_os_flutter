@@ -18,6 +18,18 @@ class SdkRoadmapConfig extends Equatable {
   List<Object?> get props => [enabled];
 }
 
+/// Server-side realtime (live notifications) configuration.
+///
+/// Absent from older servers, in which case realtime is treated as disabled.
+class SdkRealtimeConfig extends Equatable {
+  final bool enabled;
+
+  const SdkRealtimeConfig({required this.enabled});
+
+  @override
+  List<Object?> get props => [enabled];
+}
+
 class SdkLimitsConfig extends Equatable {
   final int maxScreenshots;
   final int maxScreenshotBytes;
@@ -43,6 +55,7 @@ class SdkConfig extends Equatable {
   final List<String> categories;
   final List<String> statuses;
   final SdkLimitsConfig limits;
+  final SdkRealtimeConfig realtime;
 
   const SdkConfig({
     required this.appId,
@@ -53,6 +66,7 @@ class SdkConfig extends Equatable {
     required this.categories,
     required this.statuses,
     required this.limits,
+    this.realtime = const SdkRealtimeConfig(enabled: false),
   });
 
   @override
@@ -65,5 +79,6 @@ class SdkConfig extends Equatable {
         categories,
         statuses,
         limits,
+        realtime,
       ];
 }

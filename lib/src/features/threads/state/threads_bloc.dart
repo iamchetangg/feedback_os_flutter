@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../realtime/domain/entities/feedback_os_event.dart';
+import '../../realtime/domain/realtime_link.dart';
 import '../domain/usecases/get_my_items_use_case.dart';
 import '../domain/usecases/get_thread_detail_use_case.dart';
 import '../domain/usecases/get_unread_count_use_case.dart';
@@ -15,7 +17,18 @@ class ThreadsBloc extends Bloc<ThreadsEvent, ThreadsState> {
   final SendReplyUseCase _sendReplyUseCase;
   final MarkThreadReadUseCase _markThreadReadUseCase;
 
+  final RealtimeLink? _realtime;
+
   Timer? _pollingTimer;
+  StreamSubscription<FeedbackOSEvent>? _realtimeSubscription;
+
+  /// Thread currently shown on a detail screen (set by [ThreadPollingStarted]).
+  String? _watchedItemId;
+  Duration _pollingInterval = const Duration(seconds: 4);
+
+  /// Whether "My requests" has been loaded by this bloc (and should therefore
+  /// refresh on live events).
+  bool _myItemsLoaded = false;
 
   ThreadsBloc({
     required GetMyItemsUseCase getMyItemsUseCase,
@@ -23,8 +36,10 @@ class ThreadsBloc extends Bloc<ThreadsEvent, ThreadsState> {
     required GetUnreadCountUseCase getUnreadCountUseCase,
     required SendReplyUseCase sendReplyUseCase,
     required MarkThreadReadUseCase markThreadReadUseCase,
+    RealtimeLink? realtime,
     ThreadsState? initialState,
-  })  : _getMyItemsUseCase = getMyItemsUseCase,
+  })  : _realtime = realtime,
+        _getMyItemsUseCase = getMyItemsUseCase,
         _getThreadDetailUseCase = getThreadDetailUseCase,
         _getUnreadCountUseCase = getUnreadCountUseCase,
         _sendReplyUseCase = sendReplyUseCase,
@@ -37,12 +52,38 @@ class ThreadsBloc extends Bloc<ThreadsEvent, ThreadsState> {
     on<ThreadPollingStarted>(_onThreadPollingStarted);
     on<ThreadPollingStopped>(_onThreadPollingStopped);
     on<ThreadDetailRefreshed>(_onThreadDetailRefreshed);
+    on<MyItemsRefreshed>(_onMyItemsRefreshed);
+    on<ThreadRealtimeEventReceived>(_onRealtimeEventReceived);
+    on<ThreadRealtimeConnectionChanged>(_onRealtimeConnectionChanged);
+
+    final realtime = _realtime;
+    if (realtime != null) {
+      _realtimeSubscription = realtime.events.listen((event) {
+        if (!isClosed) add(ThreadRealtimeEventReceived(event));
+      });
+      realtime.isConnected.addListener(_onRealtimeConnectivity);
+    }
+  }
+
+  bool get _isLive => _realtime?.isConnected.value ?? false;
+
+  void _onRealtimeConnectivity() {
+    if (!isClosed) {
+      add(ThreadRealtimeConnectionChanged(_realtime!.isConnected.value));
+    }
+  }
+
+  Future<void> _notifyThreadRead() async {
+    try {
+      await _realtime?.onThreadRead();
+    } catch (_) {}
   }
 
   Future<void> _onMyItemsStarted(
     MyItemsStarted event,
     Emitter<ThreadsState> emit,
   ) async {
+    _myItemsLoaded = true;
     emit(state.copyWith(
       status: ThreadsStatus.loading,
       errorMessage: null,
@@ -104,8 +145,10 @@ class ThreadsBloc extends Bloc<ThreadsEvent, ThreadsState> {
           selectedThread: detail,
         ));
 
-        // Mark read asynchronously on server
+        // Mark read asynchronously on server, then resync the global
+        // unread counter with the server value.
         await _markThreadReadUseCase(itemId: event.itemId);
+        await _notifyThreadRead();
       },
     );
   }
@@ -165,27 +208,97 @@ class ThreadsBloc extends Bloc<ThreadsEvent, ThreadsState> {
     ));
 
     await _markThreadReadUseCase(itemId: event.itemId);
+    await _notifyThreadRead();
   }
 
   void _onThreadPollingStarted(
     ThreadPollingStarted event,
     Emitter<ThreadsState> emit,
   ) {
-    _pollingTimer?.cancel();
-    final interval = event.interval ?? const Duration(seconds: 4);
-    _pollingTimer = Timer.periodic(interval, (_) {
-      if (!isClosed) {
-        add(ThreadDetailRefreshed(event.itemId, isSilent: true));
-      }
-    });
+    final previous = _watchedItemId;
+    if (previous != event.itemId) {
+      if (previous != null) _realtime?.onThreadUnwatched(previous);
+      _realtime?.onThreadWatched(event.itemId);
+    }
+    _watchedItemId = event.itemId;
+    _pollingInterval = event.interval ?? const Duration(seconds: 4);
+    _syncPollingTimer();
   }
 
   void _onThreadPollingStopped(
     ThreadPollingStopped event,
     Emitter<ThreadsState> emit,
   ) {
+    _stopWatching();
+  }
+
+  void _stopWatching() {
+    final previous = _watchedItemId;
+    _watchedItemId = null;
+    if (previous != null) _realtime?.onThreadUnwatched(previous);
     _pollingTimer?.cancel();
     _pollingTimer = null;
+  }
+
+  /// Polls the watched thread only while the live socket is not connected.
+  void _syncPollingTimer() {
+    _pollingTimer?.cancel();
+    _pollingTimer = null;
+    final itemId = _watchedItemId;
+    if (itemId == null || _isLive) return;
+    _pollingTimer = Timer.periodic(_pollingInterval, (_) {
+      if (!isClosed) {
+        add(ThreadDetailRefreshed(itemId, isSilent: true));
+      }
+    });
+  }
+
+  bool get isPolling => _pollingTimer?.isActive ?? false;
+
+  void _onRealtimeConnectionChanged(
+    ThreadRealtimeConnectionChanged event,
+    Emitter<ThreadsState> emit,
+  ) {
+    _syncPollingTimer();
+    final itemId = _watchedItemId;
+    if (event.isConnected && itemId != null) {
+      // Events are not replayed: catch up on anything missed while offline.
+      add(ThreadDetailRefreshed(itemId, isSilent: true));
+    }
+  }
+
+  Future<void> _onRealtimeEventReceived(
+    ThreadRealtimeEventReceived event,
+    Emitter<ThreadsState> emit,
+  ) async {
+    final itemId = event.event.itemId;
+    if (itemId == _watchedItemId) {
+      // The user is looking at this thread: refresh it and keep it read.
+      add(ThreadDetailRefreshed(itemId, isSilent: true));
+      await _markThreadReadUseCase(itemId: itemId);
+      await _notifyThreadRead();
+    }
+    if (_myItemsLoaded && !isClosed) {
+      add(const MyItemsRefreshed());
+    }
+  }
+
+  Future<void> _onMyItemsRefreshed(
+    MyItemsRefreshed event,
+    Emitter<ThreadsState> emit,
+  ) async {
+    final itemsResult = await _getMyItemsUseCase();
+    final unreadResult = await _getUnreadCountUseCase();
+
+    itemsResult.fold(
+      (_) {},
+      (items) => emit(state.copyWith(
+        status: ThreadsStatus.success,
+        items: items,
+        unreadCount:
+            unreadResult.fold((_) => state.unreadCount, (r) => r.count),
+      )),
+    );
   }
 
   Future<void> _onThreadDetailRefreshed(
@@ -220,9 +333,12 @@ class ThreadsBloc extends Bloc<ThreadsEvent, ThreadsState> {
   }
 
   @override
-  Future<void> close() {
-    _pollingTimer?.cancel();
-    _pollingTimer = null;
+  Future<void> close() async {
+    _stopWatching();
+    _realtime?.isConnected.removeListener(_onRealtimeConnectivity);
+    final subscription = _realtimeSubscription;
+    _realtimeSubscription = null;
+    if (subscription != null) unawaited(subscription.cancel());
     return super.close();
   }
 }

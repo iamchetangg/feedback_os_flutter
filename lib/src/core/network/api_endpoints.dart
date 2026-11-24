@@ -18,6 +18,7 @@ abstract final class ApiEndpoints {
   // Threads & My Items endpoints
   static const String meItems = '$sdkBase/me/items';
   static const String meUnread = '$sdkBase/me/unread';
+  static const String meStream = '$sdkBase/me/stream';
   static String meItemDetail(String itemId) => '$sdkBase/me/items/$itemId';
   static String meItemRead(String itemId) => '$sdkBase/me/items/$itemId/read';
   static String meItemReplies(String itemId) =>

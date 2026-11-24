@@ -70,6 +70,12 @@ import 'features/threads/presentation/my_feedback_list_view.dart';
 import 'features/threads/presentation/thread_detail_view.dart';
 import 'features/threads/state/threads_bloc.dart';
 import 'features/threads/state/threads_event.dart';
+import 'features/realtime/data/datasources/realtime_client.dart';
+import 'features/realtime/domain/entities/feedback_os_event.dart';
+import 'features/realtime/domain/realtime_link.dart';
+import 'features/realtime/presentation/in_app_notification_banner.dart';
+import 'features/realtime/state/realtime_controller.dart';
+import 'core/network/api_endpoints.dart';
 
 import 'package:image_picker/image_picker.dart';
 
@@ -165,6 +171,48 @@ class FeedbackOS {
   SdkConfig? _cachedConfig;
   String? _activeExternalUserId;
 
+  // ---------------------------------------------------------------------------
+  // Live notifications (realtime)
+  // ---------------------------------------------------------------------------
+
+  // App-lifetime outputs: they survive reconnects, identify() restarts and
+  // reset()/initialize() cycles, so host subscriptions never go stale.
+  final StreamController<FeedbackOSEvent> _eventsController =
+      StreamController<FeedbackOSEvent>.broadcast();
+  final ValueNotifier<int> _unreadCountNotifier = ValueNotifier<int>(0);
+  final ValueNotifier<bool> _liveConnectedNotifier = ValueNotifier<bool>(false);
+  final InAppNotificationBanner _banner = InAppNotificationBanner();
+  final Map<String, int> _watchedThreads = <String, int>{};
+
+  RealtimeController? _realtimeController;
+  RealtimeChannelFactory? _realtimeChannelFactory;
+  StreamSubscription<FeedbackOSEvent>? _bannerSubscription;
+  Timer? _realtimeRetryTimer;
+  int _realtimeGeneration = 0;
+  int _realtimeConfigFailures = 0;
+  RealtimeLink? _realtimeLink;
+
+  /// Live events (new creator replies, status changes) for the current
+  /// user/device.
+  ///
+  /// A broadcast stream that survives reconnects and `identify` changes.
+  /// Requires [FeedbackOSOptions.liveNotifications] and realtime enabled for
+  /// the project; otherwise it simply never emits.
+  Stream<FeedbackOSEvent> get events => _eventsController.stream;
+
+  /// Live unread replies/updates count, suitable for a badge.
+  ///
+  /// Reconciled with the server on every (re)connect and after a thread is
+  /// read; incremented as live events arrive. Also updated whenever
+  /// [getUnreadCount] is called.
+  ValueListenable<int> get unreadCount => _unreadCountNotifier;
+
+  /// Whether the live notifications socket is currently connected.
+  ValueListenable<bool> get isLiveConnected => _liveConnectedNotifier;
+
+  @visibleForTesting
+  RealtimeController? get realtimeController => _realtimeController;
+
   /// Whether the SDK has been initialized.
   bool get isInitialized => _isInitialized;
 
@@ -199,7 +247,9 @@ class FeedbackOS {
     BinaryUploader? binaryUploader,
     BoardRepository? boardRepository,
     ThreadsRepository? threadsRepository,
+    RealtimeChannelFactory? realtimeChannelFactory,
   }) async {
+    _realtimeChannelFactory = realtimeChannelFactory;
     await _initialize(
       publishableKey: publishableKey,
       options: options,
@@ -322,6 +372,166 @@ class FeedbackOS {
 
     // Trigger non-blocking sync of pending submissions
     unawaited(_queueSyncEngine!.flushQueue());
+
+    // Open the live notifications channel (non-blocking, config-gated).
+    unawaited(_startRealtime());
+  }
+
+  void _debugLog(String message) {
+    if (_options?.debugLogging ?? false) debugPrint('[FeedbackOS] $message');
+  }
+
+  /// Starts the realtime channel when enabled by both the options and the
+  /// server configuration. Safe to call repeatedly.
+  Future<void> _startRealtime() async {
+    _realtimeRetryTimer?.cancel();
+    _realtimeRetryTimer = null;
+    if (!_isInitialized || _realtimeController != null) return;
+    final options = _options!;
+    if (!options.liveNotifications) return;
+
+    final generation = _realtimeGeneration;
+    final bool enabled;
+    try {
+      enabled = (await getConfig()).realtime.enabled;
+    } catch (error) {
+      if (generation != _realtimeGeneration || !_isInitialized) return;
+      // Config unavailable (e.g. offline at launch): retry with backoff.
+      final seconds =
+          (15 * (1 << _realtimeConfigFailures.clamp(0, 5))).clamp(15, 300);
+      _realtimeConfigFailures++;
+      _debugLog('Realtime: config fetch failed, retrying in ${seconds}s');
+      _realtimeRetryTimer = Timer(Duration(seconds: seconds), () {
+        unawaited(_startRealtime());
+      });
+      return;
+    }
+    _realtimeConfigFailures = 0;
+
+    if (generation != _realtimeGeneration ||
+        !_isInitialized ||
+        _realtimeController != null) {
+      return;
+    }
+    if (!enabled) {
+      _debugLog('Realtime: disabled in server SDK config');
+      return;
+    }
+
+    final publishableKey = _publishableKey!;
+    final deviceIdStore = _deviceIdStore!;
+    final client = RealtimeClient(
+      uri: buildRealtimeUri(options.resolvedBaseUrl),
+      headersProvider: () async => {
+        ApiEndpoints.headerApiKey: publishableKey,
+        ApiEndpoints.headerDevice: await deviceIdStore.getOrCreateDeviceId(),
+      },
+      channelFactory: _realtimeChannelFactory,
+      log: _debugLog,
+    );
+    final controller = RealtimeController(
+      client: client,
+      fetchUnreadCount: () => getUnreadCount(),
+      unreadCount: _unreadCountNotifier,
+      isConnected: _liveConnectedNotifier,
+      onEvent: (event) {
+        if (!_eventsController.isClosed) _eventsController.add(event);
+      },
+      log: _debugLog,
+    );
+    _realtimeController = controller;
+    if (options.showInAppNotificationBanner) {
+      _bannerSubscription = events.listen(_showBannerFor);
+    }
+    controller.start();
+  }
+
+  /// Tears down the realtime channel and banner (outputs stay alive).
+  Future<void> _stopRealtime() async {
+    _realtimeGeneration++;
+    _realtimeRetryTimer?.cancel();
+    _realtimeRetryTimer = null;
+    await _bannerSubscription?.cancel();
+    _bannerSubscription = null;
+    _banner.dismiss();
+    final controller = _realtimeController;
+    _realtimeController = null;
+    await controller?.dispose();
+    _liveConnectedNotifier.value = false;
+  }
+
+  Future<void> _restartRealtime() async {
+    await _stopRealtime();
+    await _startRealtime();
+  }
+
+  Future<void> _reconcileUnread() async {
+    final controller = _realtimeController;
+    if (controller != null) return controller.reconcileUnread();
+    try {
+      await getUnreadCount();
+    } catch (_) {}
+  }
+
+  RealtimeLink get _threadsRealtimeLink => _realtimeLink ??= RealtimeLink(
+        events: events,
+        isConnected: _liveConnectedNotifier,
+        onThreadRead: _reconcileUnread,
+        onThreadWatched: (itemId) {
+          _watchedThreads[itemId] = (_watchedThreads[itemId] ?? 0) + 1;
+        },
+        onThreadUnwatched: (itemId) {
+          final count = (_watchedThreads[itemId] ?? 0) - 1;
+          if (count <= 0) {
+            _watchedThreads.remove(itemId);
+          } else {
+            _watchedThreads[itemId] = count;
+          }
+        },
+      );
+
+  void _showBannerFor(FeedbackOSEvent event) {
+    // The user is already looking at this thread.
+    if (_watchedThreads.containsKey(event.itemId)) return;
+    final overlay = _resolveNavigator()?.overlay;
+    if (overlay == null) {
+      _debugLog(
+          'Banner: no navigator found; pass FeedbackOSOptions.navigatorKey');
+      return;
+    }
+    final content = bannerContentFor(event);
+    _banner.show(
+      overlay: overlay,
+      title: content.title,
+      message: content.message,
+      theme: theme,
+      onTap: () {
+        final navigator = _resolveNavigator();
+        if (!_isInitialized || navigator == null) return;
+        unawaited(
+          openThreadDetail(context: navigator.context, itemId: event.itemId),
+        );
+      },
+    );
+  }
+
+  /// The host navigator: [FeedbackOSOptions.navigatorKey] if provided,
+  /// otherwise the app's root [Navigator].
+  NavigatorState? _resolveNavigator() {
+    final fromKey = _options?.navigatorKey?.currentState;
+    if (fromKey != null) return fromKey;
+    NavigatorState? found;
+    void visit(Element element) {
+      if (found != null) return;
+      if (element is StatefulElement && element.state is NavigatorState) {
+        found = element.state as NavigatorState;
+        return;
+      }
+      element.visitChildren(visit);
+    }
+
+    WidgetsBinding.instance.rootElement?.visitChildren(visit);
+    return found;
   }
 
   void _ensureInitialized() {
@@ -389,6 +599,9 @@ class FeedbackOS {
     result.fold((failure) => throw _mapFailureToException(failure), (_) {
       _activeExternalUserId = externalUserId;
     });
+
+    // The live channel is scoped to the identified user: reconnect.
+    if (_realtimeController != null) unawaited(_restartRealtime());
   }
 
   /// Disassociates any active external user ID from the device.
@@ -510,7 +723,10 @@ class FeedbackOS {
     final result = await _getUnreadCountUseCase!.call(cancelToken: cancelToken);
     return result.fold(
       (failure) => throw _mapFailureToException(failure),
-      (unread) => unread.count,
+      (unread) {
+        _unreadCountNotifier.value = unread.count;
+        return unread.count;
+      },
     );
   }
 
@@ -572,6 +788,7 @@ class FeedbackOS {
       (failure) => throw _mapFailureToException(failure),
       (_) => null,
     );
+    unawaited(_reconcileUnread());
   }
 
   /// Submits feedback (bug or feature request) following persist-before-send delivery.
@@ -904,6 +1121,10 @@ class FeedbackOS {
     } else {
       await Navigator.of(context, rootNavigator: true).push(route);
     }
+
+    // Close blocs the SDK created so their live-event subscriptions end.
+    if (customBoardBloc == null) await boardBloc.close();
+    if (customThreadsBloc == null) await threadsBloc.close();
   }
 
   /// Opens the [RoadmapView] on the unified container screen (Tab 1: Roadmap).
@@ -1023,6 +1244,9 @@ class FeedbackOS {
         },
       ),
     );
+
+    // Close the bloc the SDK created so its live-event subscription ends.
+    if (customBloc == null) await bloc.close();
   }
 
   /// Internal factory to instantiate a [BoardBloc] configured with SDK dependencies.
@@ -1045,12 +1269,19 @@ class FeedbackOS {
       getUnreadCountUseCase: _getUnreadCountUseCase!,
       sendReplyUseCase: _sendReplyUseCase!,
       markThreadReadUseCase: _markThreadReadUseCase!,
+      realtime: _threadsRealtimeLink,
     );
   }
 
   /// Resets the SDK state and closes storage connections.
 
   Future<void> reset() async {
+    await _stopRealtime();
+    _watchedThreads.clear();
+    _unreadCountNotifier.value = 0;
+    _realtimeChannelFactory = null;
+    _realtimeConfigFailures = 0;
+
     if (_submissionStore != null) {
       try {
         await _submissionStore!.close();
