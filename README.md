@@ -260,7 +260,7 @@ MaterialApp(navigatorKey: navigatorKey, /* ... */);
 
 **Behavior:**
 - The socket connects when the app is resumed and closes when it is paused or hidden. It sends a `ping` every 45 seconds and reconnects with exponential backoff and jitter (1 second up to 5 minutes, or a 5-minute wait if the server reports realtime as unavailable).
-- Missed events are not replayed. The unread count is reconciled with the server on every (re)connect and after a thread is read.
+- Missed events are not replayed. The unread count (number of threads with unread updates) is reconciled with the server on every (re)connect, shortly after each live event, and after a thread is read.
 - An open thread refreshes as soon as an event for it arrives. The `threadPollingInterval` short polling only runs as a fallback while the socket is disconnected or disabled.
 - The connection restarts on `identify()` and `clearIdentity()` and is torn down by `reset()`.
 - To opt out, set `liveNotifications: false`.
