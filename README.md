@@ -1,234 +1,164 @@
-# FeedbackOS Flutter SDK
+<h1 align="center">FeedbackOS for Flutter</h1>
 
-A production-minded, offline-first Flutter SDK for **[FeedbackOS](https://feedbackos.dev)** — capturing user feedback, bug reports, presigned screenshot attachments, public feature voting boards, product roadmaps, and two-way support threads.
+<p align="center">
+  Collect bug reports and feature requests, show a community board and roadmap,<br/>
+  and reply to your users, all inside your Flutter app.
+</p>
+
+<p align="center">
+  <a href="https://pub.dev/packages/feedback_os_flutter"><img src="https://img.shields.io/pub/v/feedback_os_flutter.svg" alt="pub version"/></a>
+  <img src="https://img.shields.io/badge/platform-iOS%20%7C%20Android-blue" alt="platforms"/>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg" alt="MIT license"/></a>
+</p>
 
 ---
 
 ## Features
 
-- 🛠 **Developer-Triggered Dialog Form**: Drop-in accessible dialog for capturing bugs and feature requests.
-- ⚡ **Programmatic Submissions**: Headless API to submit structured feedback from custom UI.
-- 🔒 **Direct Presigned Uploads**: Direct `PUT` uploads to Cloudflare R2 / S3 storage; binary blobs never traverse application servers.
-- 📦 **Durable Offline-First Queue**: Persistent SQLite submission storage with exponential backoff, jitter, and automatic network resume.
-- 👤 **Identity Association**: Link feedback and threads to authenticated user IDs or run anonymously with device UUIDv4 persistence.
-- 🗳 **Community Board & Voting**: Paginated feature requests with optimistic upvoting and server confirmation rollback.
-- 🗺 **Product Roadmap**: Structured tabbed view of planned, in-progress, and shipped features.
-- 💬 **Feedback Threads & Messages**: Two-way discussions between users and your team with unread badge counters.
-- 🔔 **Live Notifications**: Creator replies and status changes pushed over a WebSocket, with a live unread count and an optional in-app banner.
+| | |
+|---|---|
+| 📝 **Feedback form** | Drop-in bottom sheet for bug reports and feature requests, with screenshots. |
+| ⚡ **Headless API** | Submit feedback from your own UI. |
+| 📦 **Offline-first** | Submissions are saved on the device and sent automatically when the network is back. |
+| 👤 **User identity** | Link feedback to your signed-in users, or keep it anonymous. |
+| 🗳 **Community board** | Let users browse and upvote feature requests. |
+| 🗺 **Roadmap** | Show what's planned, in progress, and shipped. |
+| 💬 **Threads** | Two-way conversations between users and your team, with unread badges. |
+| 🔔 **Live notifications** | Replies and status changes arrive in real time, with an optional in-app banner. |
+
+## Contents
+
+1. [Installation](#installation)
+2. [Initialize](#initialize)
+3. [Feedback form](#feedback-form)
+4. [Headless submission](#headless-submission)
+5. [Identify users](#identify-users)
+6. [Board, roadmap & threads](#board-roadmap--threads)
+7. [Live notifications](#live-notifications)
+8. [Theming](#theming)
+9. [Options](#options)
+10. [Error handling](#error-handling)
 
 ---
 
 ## Installation
 
-Add `feedback_os_flutter` to your `pubspec.yaml`:
-
 ```yaml
 dependencies:
-  feedback_os_flutter: ^0.1.0
+  feedback_os_flutter: ^0.1.2
 ```
 
----
+## Initialize
 
-## Getting Started
-
-### 1. Initialization
-
-Initialize the SDK in your `main()` before calling `runApp()`. Provide your project's publishable API key:
+Call `initialize` once in `main()`, before `runApp()`, with your project's publishable key from the FeedbackOS dashboard.
 
 ```dart
 import 'package:flutter/material.dart';
 import 'package:feedback_os_flutter/feedback_os_flutter.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await FeedbackOS.instance.initialize(
-    publishableKey: const String.fromEnvironment(
-      'FEEDBACKOS_KEY',
-      defaultValue: 'fos_pk_live_your_key_here',
-    ),
-    // baseUrl is optional and defaults to https://api.feedbackos.dev.
-    // Point it at a local server for development, e.g.
-    // http://localhost:8787 (or http://10.0.2.2:8787 from the Android emulator).
-    options: FeedbackOSOptions(
-      baseUrl: Uri.parse('https://api.feedbackos.dev'),
-    ),
+    publishableKey: const String.fromEnvironment('FEEDBACKOS_KEY'),
   );
 
   runApp(const MyApp());
 }
 ```
 
-> **Security Note:** Never hardcode secret keys in production binaries. Publishable keys (`fos_pk_...`) are public and project-scoped, but best practice is injecting them via `--dart-define` or environment configs.
+> [!TIP]
+> Publishable keys (`fos_pk_...`) are safe to ship in your app. Passing yours with `--dart-define` keeps it out of source control.
 
----
-
-## Usage Guide
-
-### 2. Showing the Feedback Form
-
-Display the built-in modal bottom sheet or dialog to collect user feedback:
+## Feedback form
 
 ```dart
 final result = await FeedbackOS.instance.showFeedback(
   context: context,
-  type: FeedbackType.bug, // or FeedbackType.feature
+  initialType: FeedbackType.bug, // or FeedbackType.feature
 );
 
-if (result != null && result.isSuccess) {
+if (result != null) {
   ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(content: Text('Feedback received! Thank you.')),
+    const SnackBar(content: Text('Thanks for your feedback!')),
   );
 }
 ```
 
-### 3. Programmatic Submission (Headless)
+Users can attach up to 3 screenshots, which are compressed automatically before upload.
 
-If you have your own bespoke UI, submit feedback directly:
+## Headless submission
+
+Build your own UI and submit directly:
 
 ```dart
+final screenshot = await FeedbackOS.pickScreenshot(); // optional
+
 final result = await FeedbackOS.instance.submitFeedback(
   type: FeedbackType.feature,
   title: 'Export transactions to CSV',
-  description: 'Would love an option to export monthly reports to CSV format.',
+  description: 'An option to export monthly reports would be great.',
   category: 'Reporting',
-  screenshotUploadIds: ['upload_id_1'], // Optional uploaded screenshot IDs
+  attachments: [if (screenshot != null) screenshot],
 );
 
 switch (result.status) {
   case FeedbackSubmitStatus.sent:
-    print('Delivered to server: ${result.clientSubmissionId}');
-    break;
+    print('Delivered: ${result.itemId}');
   case FeedbackSubmitStatus.queued:
-    print('Offline: saved locally, will sync automatically');
-    break;
-  case FeedbackSubmitStatus.failure:
-    print('Failed: ${result.errorMessage}');
-    break;
+    print('Offline: saved and will be sent automatically');
 }
 ```
 
-### 4. User Identification & Logout
+Every submission is saved on the device before it is sent, so nothing is lost when the user is offline. Queued items are retried with backoff, and also sent when the app resumes or the network comes back.
 
-Link user reports to an authenticated account:
+## Identify users
 
 ```dart
-// When user logs in
+// After sign-in
 await FeedbackOS.instance.identify(externalUserId: user.id);
 
-// When user logs out
+// After sign-out
 await FeedbackOS.instance.clearIdentity();
 ```
 
-> **Queue Integrity**: Queued offline submissions record an identity snapshot at creation time and preserve user context during replay.
+Feedback queued while offline keeps the identity it was created with.
 
----
+## Board, roadmap & threads
 
-### 5. Screenshots & Attachments
-
-Reserve an upload slot and directly send image bytes to the presigned storage URL:
+Each of these opens a built-in screen with one call. All of them use the same screen, which has **Board**, **Roadmap** and **My requests** tabs and a **+ New request** button.
 
 ```dart
-final bytes = await File('path/to/screenshot.png').readAsBytes();
-
-final uploadId = await FeedbackOS.instance.uploadScreenshot(
-  filename: 'screenshot.png',
-  bytes: bytes,
-  contentType: 'image/png', // 'image/png' or 'image/jpeg'
-);
-
-// Pass uploadId into submitFeedback:
-await FeedbackOS.instance.submitFeedback(
-  type: FeedbackType.bug,
-  title: 'Checkout button overflow',
-  description: 'Text clips on iPhone SE screen size.',
-  screenshotUploadIds: [uploadId],
-);
+FeedbackOS.instance.openBoard(context: context);
+FeedbackOS.instance.openRoadmap(context: context);
+FeedbackOS.instance.openFeedbackDashboard(context: context); // "My requests"
+FeedbackOS.instance.openThreadDetail(context: context, itemId: itemId);
 ```
 
----
-
-### 6. Community Feature Board
-
-Render the community feedback board with upvoting and pagination:
+To show a badge, read the unread count once:
 
 ```dart
-// 1. Create the BoardBloc using the SDK factory
-final boardBloc = FeedbackOS.instance.createBoardBloc();
-
-// 2. Provide the bloc to the view
-BlocProvider<BoardBloc>.value(
-  value: boardBloc..add(const BoardStarted()),
-  child: BoardView(
-    onBack: () => Navigator.pop(context),
-  ),
-);
+final int unread = await FeedbackOS.instance.getUnreadCount();
 ```
 
-### 7. Product Roadmap
+For a badge that updates by itself, use the `unreadCount` listenable described in [Live notifications](#live-notifications).
 
-Display planned, in-progress, and shipped milestones:
+## Live notifications
 
-```dart
-final boardBloc = FeedbackOS.instance.createBoardBloc();
-
-BlocProvider<BoardBloc>.value(
-  value: boardBloc..add(const RoadmapStarted()),
-  child: RoadmapView(
-    onBack: () => Navigator.pop(context),
-  ),
-);
-```
-
-### 8. User Feedback Threads & Discussions
-
-Let users view their submitted items, see team responses, and reply:
+When realtime is enabled for your project, the SDK keeps a live connection open while the app is in the foreground. Users see replies and status changes without reopening the feedback screens. It's on by default.
 
 ```dart
-final threadsBloc = FeedbackOS.instance.createThreadsBloc();
-
-// List user feedback items
-BlocProvider<ThreadsBloc>.value(
-  value: threadsBloc..add(const MyItemsStarted()),
-  child: MyFeedbackListView(
-    onItemTap: (itemId) {
-      // Navigate to ThreadDetailView
-    },
-  ),
-);
-
-// Detail discussion view
-BlocProvider<ThreadsBloc>.value(
-  value: threadsBloc..add(ThreadDetailStarted(itemId)),
-  child: ThreadDetailView(itemId: itemId),
-);
-```
-
-Check unread messages for a badge counter:
-
-```dart
-final int unreadCount = await FeedbackOS.instance.getUnreadCount();
-print('Unread replies: $unreadCount');
-```
-
-For a badge that updates by itself, use the live `FeedbackOS.instance.unreadCount` listenable (see [Live Notifications](#9-live-notifications)).
-
-### 9. Live Notifications
-
-When realtime is enabled for your project, the SDK keeps a WebSocket open (`/v1/sdk/me/stream`) while the app is in the foreground, so users see creator replies and status changes without opening the feedback screens. It is on by default (`liveNotifications: true`) and only connects if the server SDK config reports `realtime.enabled`. Older servers that don't send the field never get connection attempts.
-
-```dart
-// Stream of live events (broadcast; survives reconnects and identify()).
-final sub = FeedbackOS.instance.events.listen((event) {
+// Live events
+FeedbackOS.instance.events.listen((event) {
   switch (event) {
     case ReplyReceived(:final itemId, :final authorName, :final preview):
-      print('New reply on $itemId from ${authorName ?? 'the team'}: $preview');
+      print('${authorName ?? 'The team'} replied on $itemId: $preview');
     case StatusChanged(:final itemId, :final toStatus):
       print('$itemId is now $toStatus');
   }
 });
 
-// Badge driven by the live unread count.
+// A badge that updates by itself
 ValueListenableBuilder<int>(
   valueListenable: FeedbackOS.instance.unreadCount,
   builder: (context, unread, _) => Badge(
@@ -237,12 +167,13 @@ ValueListenableBuilder<int>(
     child: const Icon(Icons.forum_outlined),
   ),
 );
-
-// Optional: connection state.
-FeedbackOS.instance.isLiveConnected; // ValueListenable<bool>
 ```
 
-**In-app banner.** Set `showInAppNotificationBanner: true` to show a small banner at the top of the screen when an event arrives ("New reply" + preview, or "Status updated: shipped"). It dismisses itself after about 4 seconds, and tapping it opens the thread. Pass your app's `navigatorKey` (for example the one you give `MaterialApp` or `GoRouter`) so the SDK can find the overlay. Without one, it falls back to the app's root navigator. No banner is shown for a thread that is already open on screen.
+To show whether the live connection is up, listen to `FeedbackOS.instance.isLiveConnected` (a `ValueListenable<bool>`).
+
+### In-app banner
+
+You can turn on a small banner that appears when an event arrives. Tapping it opens the thread.
 
 ```dart
 final navigatorKey = GlobalKey<NavigatorState>();
@@ -255,42 +186,69 @@ await FeedbackOS.instance.initialize(
   ),
 );
 
-MaterialApp(navigatorKey: navigatorKey, /* ... */);
+MaterialApp(navigatorKey: navigatorKey /* ... */);
 ```
 
-**Behavior:**
-- The socket connects when the app is resumed and closes when it is paused or hidden. It sends a `ping` every 45 seconds and reconnects with exponential backoff and jitter (1 second up to 5 minutes, or a 5-minute wait if the server reports realtime as unavailable).
-- Missed events are not replayed. The unread count (number of threads with unread updates) is reconciled with the server on every (re)connect, shortly after each live event, and after a thread is read.
-- An open thread refreshes as soon as an event for it arrives. The `threadPollingInterval` short polling only runs as a fallback while the socket is disconnected or disabled.
-- The connection restarts on `identify()` and `clearIdentity()` and is torn down by `reset()`.
-- To opt out, set `liveNotifications: false`.
+If you don't pass a `navigatorKey`, the SDK uses the app's root navigator. No banner is shown for a thread that is already open.
 
----
+### Good to know
 
-## Offline Queue Resilience
+- The connection opens while the app is in the foreground, closes in the background, and reconnects automatically.
+- Events missed while disconnected aren't replayed, but `unreadCount` is resynced with the server every time the connection is restored.
+- An open thread refreshes as soon as a new event arrives. `threadPollingInterval` polling is only a fallback while the live connection is down.
+- `identify()` and `clearIdentity()` restart the connection for the new user.
+- To turn it off, set `liveNotifications: false`.
 
-The SDK uses a durable SQLite database (`sqflite`) for storing feedback items before network transmission:
-1. **Immediate Write-Ahead Persistence**: Every submission is persisted to disk before initiating any network request.
-2. **Exponential Backoff with Jitter**: If the server is unreachable or rate-limits with `Retry-After`, requests retry safely without hammering endpoints.
-3. **Connectivity & Lifecycle Listeners**: Automatically flushes the queue when internet connectivity returns or when the app resumes from the background.
-4. **Manual Queue Trigger**:
-   ```dart
-   final processedCount = await FeedbackOS.instance.flushQueue();
-   ```
+## Theming
 
----
+The SDK screens use a light theme by default. You can use the built-in dark theme, build one from your app's `ThemeData`, or set your own colors:
 
-## Architectural Principles
+```dart
+FeedbackOSOptions(theme: FeedbackOSTheme.dark());
+FeedbackOSOptions(theme: FeedbackOSTheme.fromTheme(Theme.of(context)));
+FeedbackOSOptions(theme: const FeedbackOSTheme(primaryColor: Colors.teal));
 
-This SDK is engineered strictly according to Clean Architecture and SOLID:
-- **Feature-First Structure**: Features (`board`, `threads`, `uploads`, `feedback`) isolate `data/`, `domain/`, `presentation/`, and `state/`.
-- **FP-Dart Error Handling**: Repository methods return `Either<Failure, Success>` with zero unhandled exceptions leaking to UI widgets.
-- **CancelToken Support**: Network calls accept Dio `CancelToken`s for request cancellation on screen disposal.
-- **Decoupled State**: BLoCs are instantiated via dependency injection and factory helpers, never inside the UI widget tree.
-- **Centralized Design System**: Typography and tokens are centralized in `AppStyles`.
+// Change it at runtime
+FeedbackOS.instance.switchTheme(isDark: true);
+```
+
+## Options
+
+All fields of `FeedbackOSOptions` are optional.
+
+| Option | Default | Description |
+|---|---|---|
+| `theme` | `FeedbackOSTheme()` | Colors used by the SDK screens. |
+| `liveNotifications` | `true` | Receive replies and status changes in real time. |
+| `showInAppNotificationBanner` | `false` | Show a banner when a live event arrives. |
+| `navigatorKey` | `null` | Your app's navigator key, used by the banner. |
+| `threadPollingInterval` | `4s` | How often an open thread refreshes while live updates are unavailable. |
+| `maxOfflineQueueSize` | `500` | Maximum number of submissions kept offline. |
+| `queueItemTtl` | `7 days` | How long an offline submission is kept before it expires. |
+| `connectTimeout` | `15s` | Network connect timeout. |
+| `receiveTimeout` | `15s` | Network receive timeout. |
+| `debugLogging` | `false` | Print SDK logs. Keys, payloads and images are never logged. |
+
+## Error handling
+
+When a call fails, the SDK throws a subclass of `FeedbackOsException`:
+
+```dart
+try {
+  await FeedbackOS.instance.identify(externalUserId: user.id);
+} on FeedbackOsNetworkException {
+  // Offline or timed out
+} on FeedbackOsRateLimitException {
+  // Too many requests, try again later
+} on FeedbackOsException catch (e) {
+  print(e.message);
+}
+```
+
+`submitFeedback` doesn't throw on network errors. The submission is queued and the call returns `FeedbackSubmitStatus.queued`.
 
 ---
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT. See [LICENSE](LICENSE).

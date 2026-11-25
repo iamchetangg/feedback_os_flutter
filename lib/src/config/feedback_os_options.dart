@@ -1,18 +1,9 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter/widgets.dart';
 import '../../core/theme/theme.dart';
-import '../core/network/api_endpoints.dart';
 
 /// Configuration options for initializing the FeedbackOS SDK.
 class FeedbackOSOptions extends Equatable {
-  /// Base URL of the FeedbackOS API (e.g. `http://localhost:8787` or
-  /// `http://10.0.2.2:8787` from the Android emulator).
-  ///
-  /// When `null`, the production API ([ApiEndpoints.productionBaseUrl]) is
-  /// used. Read [resolvedBaseUrl] for the effective value. Both the HTTP
-  /// client and the live notifications WebSocket derive from it.
-  final Uri? baseUrl;
-
   /// HTTP connect timeout. Defaults to 15 seconds.
   final Duration connectTimeout;
 
@@ -56,7 +47,6 @@ class FeedbackOSOptions extends Equatable {
   final GlobalKey<NavigatorState>? navigatorKey;
 
   const FeedbackOSOptions({
-    this.baseUrl,
     this.connectTimeout = const Duration(seconds: 15),
     this.receiveTimeout = const Duration(seconds: 15),
     this.debugLogging = false,
@@ -69,12 +59,8 @@ class FeedbackOSOptions extends Equatable {
     this.navigatorKey,
   });
 
-  /// The effective API base URL ([baseUrl] or the production URL).
-  Uri get resolvedBaseUrl => baseUrl ?? ApiEndpoints.productionBaseUrl;
-
   /// Creates a copy of this configuration with the given fields replaced.
   FeedbackOSOptions copyWith({
-    Uri? baseUrl,
     Duration? connectTimeout,
     Duration? receiveTimeout,
     bool? debugLogging,
@@ -87,7 +73,6 @@ class FeedbackOSOptions extends Equatable {
     GlobalKey<NavigatorState>? navigatorKey,
   }) {
     return FeedbackOSOptions(
-      baseUrl: baseUrl ?? this.baseUrl,
       connectTimeout: connectTimeout ?? this.connectTimeout,
       receiveTimeout: receiveTimeout ?? this.receiveTimeout,
       debugLogging: debugLogging ?? this.debugLogging,
@@ -105,7 +90,6 @@ class FeedbackOSOptions extends Equatable {
 
   @override
   List<Object?> get props => [
-        baseUrl,
         connectTimeout,
         receiveTimeout,
         debugLogging,

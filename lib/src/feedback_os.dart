@@ -422,7 +422,7 @@ class FeedbackOS {
     final publishableKey = _publishableKey!;
     final deviceIdStore = _deviceIdStore!;
     final client = RealtimeClient(
-      uri: buildRealtimeUri(options.resolvedBaseUrl),
+      uri: buildRealtimeUri(ApiEndpoints.baseUrl),
       headersProvider: () async => {
         ApiEndpoints.headerApiKey: publishableKey,
         ApiEndpoints.headerDevice: await deviceIdStore.getOrCreateDeviceId(),
@@ -793,7 +793,6 @@ class FeedbackOS {
   }
 
   /// Submits feedback (bug or feature request) following persist-before-send delivery.
-
   ///
   /// 1. Validates local payload bounds.
   /// 2. Commits submission to durable offline queue.
@@ -1005,8 +1004,6 @@ class FeedbackOS {
   /// Displays the interactive FeedbackOS submission modal bottom sheet.
   ///
   /// Safe to call from any valid [BuildContext].
-  /// Adheres to project Golden Rule 6: Bloc is instantiated outside the UI tree
-  /// and injected cleanly via BlocProvider.
   Future<FeedbackSubmitResult?> showFeedback({
     required BuildContext context,
     FeedbackType initialType = FeedbackType.bug,
@@ -1080,7 +1077,6 @@ class FeedbackOS {
   ///
   /// Features a 3-tab segmented navigation bar ('Board' | 'Roadmap' | 'My requests')
   /// and the floating '+ New request' button.
-  /// Adheres to Golden Rules 6 & 7: Blocs are instantiated outside the UI tree.
   Future<void> openContainer({
     required BuildContext context,
     int initialTabIndex = 0,
@@ -1137,7 +1133,6 @@ class FeedbackOS {
   /// Opens the [RoadmapView] on the unified container screen (Tab 1: Roadmap).
   ///
   /// Safe to call from any valid [BuildContext].
-  /// Adheres to project Golden Rule 6 & 7.
   Future<void> openRoadmap({
     required BuildContext context,
     BoardBloc? customBloc,
@@ -1160,7 +1155,6 @@ class FeedbackOS {
   /// Opens the [BoardView] on the unified container screen (Tab 0: Board).
   ///
   /// Safe to call from any valid [BuildContext].
-  /// Adheres to project Golden Rule 6 & 7.
   Future<void> openBoard({
     required BuildContext context,
     BoardBloc? customBloc,
@@ -1182,7 +1176,6 @@ class FeedbackOS {
   /// Opens the [MyFeedbackListView] on the unified container screen (Tab 2: My requests).
   ///
   /// Safe to call from any valid [BuildContext].
-  /// Adheres to project Golden Rule 6 & 7.
   Future<void> openFeedbackDashboard({
     required BuildContext context,
     ThreadsBloc? customBloc,
@@ -1216,8 +1209,6 @@ class FeedbackOS {
   /// Opens the [ThreadDetailView] on a new screen for discussion thread replies.
   ///
   /// Safe to call from any valid [BuildContext].
-  /// Adheres to project Golden Rule 6 & 7: Bloc is instantiated outside the UI tree
-  /// and injected cleanly via [BlocProvider.value].
   Future<void> openThreadDetail({
     required BuildContext context,
     required String itemId,

@@ -110,16 +110,6 @@ void main() {
     expect(FeedbackOS.instance.unreadCount.value, 2);
   });
 
-  test('uses the configured baseUrl for the stream URL', () async {
-    await init(
-      options: FeedbackOSOptions(baseUrl: Uri.parse('http://10.0.2.2:8787')),
-    );
-    expect(
-      factory.uris.single.toString(),
-      'ws://10.0.2.2:8787/v1/sdk/me/stream',
-    );
-  });
-
   test('exposes live events and resyncs unreadCount', () async {
     await init();
     final received = <FeedbackOSEvent>[];

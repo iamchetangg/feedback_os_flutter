@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 /// Centralized text styles and typography for FeedbackOS SDK.
-/// Mandated by project architecture rules.
 abstract final class AppStyles {
   // Font Family
   static const String fontFamily = 'Roboto';

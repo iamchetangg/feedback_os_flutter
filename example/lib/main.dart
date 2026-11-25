@@ -6,15 +6,9 @@ import 'router/app_router.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Optional API override for local testing, e.g.
-  //   --dart-define=FEEDBACKOS_BASE_URL=http://localhost:8787
-  //   --dart-define=FEEDBACKOS_BASE_URL=http://10.0.2.2:8787 (Android emulator)
-  const baseUrl = String.fromEnvironment('FEEDBACKOS_BASE_URL');
-
   await FeedbackOS.instance.initialize(
     publishableKey: const String.fromEnvironment('FEEDBACKOS_KEY'),
     options: FeedbackOSOptions(
-      baseUrl: baseUrl.isEmpty ? null : Uri.parse(baseUrl),
       // Live notifications are on by default; also show the in-app banner.
       showInAppNotificationBanner: true,
       navigatorKey: rootNavigatorKey,

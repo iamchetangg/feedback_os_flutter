@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.2] - 2026-11-25
 
 ### Added
 - **Live notifications** over a WebSocket (`GET /v1/sdk/me/stream`), gated by the new `realtime.enabled` field in the SDK config (treated as disabled when absent):
@@ -14,7 +14,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `FeedbackOS.instance.isLiveConnected` (`ValueListenable<bool>`).
   - Lifecycle-aware connection (foreground only), a 45s text ping, and exponential backoff with jitter (1s to 5min; 5min on HTTP 503/401).
   - Optional in-app banner (`showInAppNotificationBanner`, default `false`). Tapping it opens the thread.
-- `FeedbackOSOptions.baseUrl` is now honored by the HTTP client and the realtime socket (defaults to production), which allows testing against a local server.
 - New options: `liveNotifications` (default `true`), `showInAppNotificationBanner` (default `false`), `navigatorKey`.
 - `SdkRealtimeConfig` on `SdkConfig.realtime`, and a new `MyItemsRefreshed` threads event for silent list refreshes.
 
@@ -22,9 +21,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - An open thread now refreshes on live events. The `threadPollingInterval` polling only runs while the live socket is disconnected or disabled.
 - Blocs created internally by `openContainer` / `openThreadDetail` are closed when their route is popped.
 
+### Removed
+- `FeedbackOSOptions.baseUrl`. The SDK always connects to the FeedbackOS API (the field had no effect in 0.1.1).
+
 ### Fixed
-- `FeedbackOSOptions.copyWith(baseUrl:)` ignored its value.
-- README: `getUnreadCount()` returns an `int` (the snippet used `.count`).
+- README snippets now match the actual API (`showFeedback(initialType:)`, `FeedbackSubmitStatus`, `getUnreadCount()` returning an `int`, and the `open*` screen helpers).
 
 ## [0.1.1] - 2026-11-08
 

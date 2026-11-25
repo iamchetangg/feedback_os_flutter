@@ -1,7 +1,7 @@
-/// FeedbackOS Flutter SDK
+/// FeedbackOS Flutter SDK.
 ///
-/// A production-minded Flutter SDK for FeedbackOS bug reports, feature requests,
-/// offline delivery, and roadmap integration.
+/// Collect bug reports and feature requests, show a community board and
+/// roadmap, and let users follow replies to their feedback in your app.
 library feedback_os_flutter;
 
 // Core public facade & options
@@ -169,5 +169,5 @@ export 'src/identity/device_id_store.dart'
 export 'src/identity/device_info_provider.dart'
     show DeviceInfoProvider, StaticDeviceInfoProvider;
 
-// Typography & Styles (per rule 16)
+// Typography & Styles
 export 'core/theme/styles.dart' show AppStyles;

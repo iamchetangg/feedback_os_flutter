@@ -1,6 +1,10 @@
 abstract final class ApiEndpoints {
-  // Base URLs
-  static final Uri productionBaseUrl = Uri.parse('https://api.feedbackos.dev');
+  static const String _apiUrlOverride =
+      String.fromEnvironment('FEEDBACKOS_API_URL');
+
+  static final Uri baseUrl = Uri.parse(
+    _apiUrlOverride.isEmpty ? 'https://api.feedbackos.dev' : _apiUrlOverride,
+  );
 
   static const String sdkBase = '/v1/sdk';
 
